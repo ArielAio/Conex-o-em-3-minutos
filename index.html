@@ -81,6 +81,9 @@
       }
     </script>
     <style>
+      html, body {
+        overflow-x: hidden;
+      }
       body {
         background: radial-gradient(circle at 20% 20%, rgba(216, 180, 226, 0.08), transparent 25%), radial-gradient(circle at 80% 0%, rgba(229, 195, 198, 0.08), transparent 20%), #FDFCF8;
         color: #4A4A4A;
@@ -101,8 +104,9 @@
         width: 100%;
         max-width: var(--shell-max);
         margin: 0 auto;
-        padding-left: clamp(1.25rem, 2vw, 2.25rem);
-        padding-right: clamp(1.25rem, 2vw, 2.25rem);
+        padding-left: max(1rem, var(--safe-left));
+        padding-right: max(1rem, var(--safe-right));
+        box-sizing: border-box;
       }
       @media (min-width: 1280px) {
         :root {
@@ -123,6 +127,7 @@
       .px-safe {
         padding-left: max(1rem, var(--safe-left));
         padding-right: max(1rem, var(--safe-right));
+        box-sizing: border-box;
       }
       .rounded-surface {
         border-radius: 28px;
