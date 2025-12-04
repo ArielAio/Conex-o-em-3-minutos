@@ -43,11 +43,57 @@ const getGreeting = () => {
 };
 
 const NEXT_STEP_SUGGESTIONS = [
-  'Envie um áudio de 30s contando o melhor minuto do seu dia.',
-  'Deixe um bilhete rápido com um elogio específico.',
-  'Combine uma mini-saída de 15 minutos nesta semana.',
-  'Relembre em voz alta um momento do mês que marcou vocês.',
-  'Respirem juntos por 1 minuto e contem até 10 devagar.',
+  'Grave um áudio de 30s contando o melhor momento do seu dia — e por que ele importou.',
+  'Deixe um bilhete curto elogiando algo específico que o outro fez nas últimas 24h.',
+  'Marquem uma saída rápida de 15 minutos esta semana só para conversarem caminhando.',
+  'Contem um ao outro um momento recente que fez vocês se sentirem mais conectados.',
+  'Façam uma respiração guiada de 1 minuto juntos, sincronizando o ritmo.',
+  'Escolham uma foto favorita e conversem por 3 minutos sobre a história por trás dela.',
+  'Preparem um chá ou café juntos e conversem sem celular por 5 minutos.',
+  'Troquem uma música que represente o clima emocional de hoje.',
+  'Pergunte: “O que você mais vai precisar de mim amanhã?” e escute sem interromper.',
+  'Agradeça verbalmente por algo pequeno que o outro fez hoje e que você percebeu.',
+  'Escolham uma refeição simples e definam um dia para cozinharem juntos esta semana.',
+  'Façam uma caminhada curta de 5 minutos prestando atenção só na presença do outro.',
+  'Escrevam um “sim/mais”: algo que querem repetir mais vezes no relacionamento.',
+  'Façam um check-in rápido: de 0 a 10, qual é o nível de energia emocional hoje?',
+  'Olhem-se nos olhos por 20 segundos e tentem descrever como se sentiram depois.',
+  'Envie amanhã uma mensagem surpresa que faça o outro sorrir em 10 palavras.',
+  'Escolham um mini-ritual semanal para testarem nos próximos 7 dias.',
+  'Compartilhem um medo ou preocupação em até duas frases, sem explicações longas.',
+  'Relembrem um aprendizado recente que fortaleceu vocês como casal.',
+  'Listem três pequenas vitórias da semana — individuais ou em dupla.',
+  'Façam um “turno de fala”: cada um fala por 60s sem interrupções.',
+  'Segurem a mão do outro por 30 segundos focando só no toque.',
+  'Criem uma playlist curta (3 músicas) para ouvirem juntos amanhã.',
+  'Escolham uma tarefa pequena da casa para fazerem juntos amanhã.',
+  'Peçam claramente algo que precisam para amanhã: “preciso de X, pode me ajudar?”.',
+  'Leiam em voz alta algo que escreveram hoje na reflexão do dia.',
+  'Convidem o outro para uma micro-meditação de 2 minutos lado a lado.',
+  'Definam um horário para irem dormir juntos hoje ou amanhã.',
+  'Façam um elogio físico e outro de personalidade, ambos bem específicos.',
+  'Compartilhem um desejo para o próximo mês em uma frase curta.',
+  'Escolham uma palavra de “pausa segura” para usar antes de discussões escalarem.',
+  'Combinem um minuto de alongamento juntos amanhã cedo.',
+  'Escrevam num post-it algo simples que trouxe calma hoje.',
+  'Escolham um emoji-código para mandarem durante o dia como sinal de carinho.',
+  'Definam um limite de tela para hoje à noite e cumpram juntos.',
+  'Montem um mini “kit emocional”: chá, playlist, frase, foto — algo que acalma.',
+  'Façam uma previsão emocional de amanhã: “acho que vou estar assim por causa de...”',
+  'Escolham uma pergunta curiosa para fazer amanhã no almoço.',
+  'Crie um lembrete no celular: “elogiar algo até 12h” e cumpra.',
+  'Comentem um detalhe do outro que ninguém mais percebe.',
+  'Revejam uma foto antiga e digam o que mudou para melhor desde aquele dia.',
+  'Façam um pequeno brinde com água celebrando algo minúsculo que deu certo.',
+  'Marquem um “encontro de corredor”: 3 minutos de conversa sem distrações.',
+  'Listem três comportamentos que querem evitar no próximo conflito.',
+  'Gravem um áudio de boa-noite e troquem antes de dormir.',
+  'Mandem um meme que descreva o humor do relacionamento hoje.',
+  'Criem um gesto físico rápido que signifique “tô com você”.',
+  'Inventem um apelido carinhoso provisório só para esta semana.',
+  'Repitam amanhã a missão favorita do mês — a escolha é livre.',
+  'Definam uma palavra-curinga para lembrar de respirar em momentos tensos.',
+  'Escrevam algo que querem dizer, mas preferem guardar para amanhã.',
 ];
 
 const App = () => {
@@ -343,14 +389,15 @@ const App = () => {
 
             <div className="space-y-0">
                 {visibleMissions.map((mission, index) => {
-                    const isDone = user.completedMissionIds.includes(mission.id);
-                    const isLocked = !isDone && mission.day > currentDay;
-                    const isFuture = mission.day > currentDay;
-                    
-                    // Streak logic: Check if this mission and the PREVIOUS mission in the list were both done
-                    const prevMission = visibleMissions[index - 1];
-                    const isPrevDone = prevMission && user.completedMissionIds.includes(prevMission.id);
-                    const isStreak = isDone && isPrevDone;
+                const isDone = user.completedMissionIds.includes(mission.id);
+                const isLocked = !isDone && mission.day > currentDay;
+                const isFuture = mission.day > currentDay;
+                const reflection = typeof window !== 'undefined' ? (localStorage.getItem(`ce3m-reflection-${mission.id}`) || '') : '';
+                
+                // Streak logic: Check if this mission and the PREVIOUS mission in the list were both done
+                const prevMission = visibleMissions[index - 1];
+                const isPrevDone = prevMission && user.completedMissionIds.includes(prevMission.id);
+                const isStreak = isDone && isPrevDone;
 
                     return (
                         <div 
@@ -388,6 +435,11 @@ const App = () => {
                                 </div>
 
                                 {isDone && <p className="text-sm text-gray-500 mt-1 line-clamp-1">{mission.action}</p>}
+                                {isDone && reflection.trim() && (
+                                  <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
+                                    Reflexão: {reflection.trim()}
+                                  </p>
+                                )}
                             </div>
                         </div>
                     )
