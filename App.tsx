@@ -42,6 +42,22 @@ const getGreeting = () => {
   return 'Boa noite';
 };
 
+const MOOD_OPTIONS = [
+  { value: '😊', label: 'Leve' },
+  { value: '😌', label: 'Calmo' },
+  { value: '🤔', label: 'Pensativo' },
+  { value: '😣', label: 'Tenso' },
+  { value: '😍', label: 'Grato' },
+];
+
+const NEXT_STEP_SUGGESTIONS = [
+  'Envie um áudio de 30s contando o melhor minuto do seu dia.',
+  'Deixe um bilhete rápido com um elogio específico.',
+  'Combine uma mini-saída de 15 minutos nesta semana.',
+  'Relembre em voz alta um momento do mês que marcou vocês.',
+  'Respirem juntos por 1 minuto e contem até 10 devagar.',
+];
+
 const App = () => {
   const [user, setUser] = useState<UserProgress | null>(null);
   const [currentDay, setCurrentDay] = useState(1);
@@ -54,11 +70,14 @@ const App = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [showNextMonthModal, setShowNextMonthModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [moodToday, setMoodToday] = useState<string>('');
+  const [highlightReflection, setHighlightReflection] = useState<{ title: string; text: string } | null>(null);
   
   // Pagination state for history to prevent heavy rendering
   const [historyPage, setHistoryPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
   const [tabChanging, setTabChanging] = useState(false);
+  const todayKey = new Date().toISOString().slice(0, 10);
 
   // Helper to load data
   const loadUserData = async () => {
@@ -101,6 +120,22 @@ const App = () => {
       setEditPartnerName(user.partnerName || '');
     }
   }, [user]);
+
+  useEffect(() => {
+    const storedMood = localStorage.getItem(`ce3m-mood-${todayKey}`);
+    if (storedMood) setMoodToday(storedMood);
+    // highlight reflection mais longa
+    let best: { title: string; text: string } | null = null;
+    MISSIONS.forEach((mission) => {
+      const reflection = localStorage.getItem(`ce3m-reflection-${mission.id}`);
+      if (reflection && reflection.trim().length > 0) {
+        if (!best || reflection.length > best.text.length) {
+          best = { title: mission.title, text: reflection.trim() };
+        }
+      }
+    });
+    setHighlightReflection(best);
+  }, [todayKey]);
 
   useEffect(() => {
     setTabChanging(true);
@@ -184,12 +219,75 @@ const App = () => {
   const activeMission = getMissionByDay(currentDay);
   const isCompleted = activeMission ? user.completedMissionIds.includes(activeMission.id) : false;
 
-  const renderMissionView = () => (
+  const renderMissionView = () => {
+    const shareSuggestion = async () => {
+      if (!activeMission) return;
+      const suggestion = NEXT_STEP_SUGGESTIONS[activeMission.day % NEXT_STEP_SUGGESTIONS.length];
+      const text = `Acabei "${activeMission.title}" (Dia ${activeMission.day}) no Conexão em 3 Minutos. Próximo passo sugerido: ${suggestion}`;
+      try {
+        await navigator.share({ title: 'Próximo passo', text });
+      } catch (err) {
+        console.log('Share suggestion fallback', err);
+      }
+    };
+
+    return (
     <div className="space-y-6 md:space-y-8">
         <header className="mb-4">
             <h1 className="font-serif heading-lg text-brand-text leading-tight">{getGreeting()}, {user.name.split(' ')[0]}</h1>
             <p className="text-gray-500 text-xs sm:text-sm">{formatToday()}</p>
         </header>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm card-padding soft-hover transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Check-in de humor</p>
+              {moodToday && <span className="text-sm">{moodToday}</span>}
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Escolha um emoji para registrar como vocês chegaram hoje.</p>
+            <div className="flex gap-2">
+              {MOOD_OPTIONS.map((m) => (
+                <button
+                  key={m.value}
+                  onClick={() => { setMoodToday(m.value); localStorage.setItem(`ce3m-mood-${todayKey}`, m.value); }}
+                  className={`px-3 py-2 rounded-xl border text-lg ${moodToday === m.value ? 'border-brand-primary bg-brand-primary/15' : 'border-gray-200 bg-gray-50'} hover:scale-105 transition`}
+                  aria-label={m.label}
+                >
+                  {m.value}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm card-padding soft-hover transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase text-gray-500 font-bold tracking-[0.2em]">Linha da semana</p>
+              <span className="text-xs text-brand-primary font-semibold">Streak {user.streak}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              {Array.from({ length: 7 }).map((_, idx) => {
+                const dayNumber = Math.max(1, currentDay - 6) + idx;
+                const mission = getMissionByDay(dayNumber);
+                const done = mission ? user.completedMissionIds.includes(mission.id) : false;
+                const isToday = dayNumber === currentDay;
+                const isFuture = dayNumber > currentDay;
+                return (
+                  <div key={dayNumber} className="flex-1">
+                    <div className={`h-2 rounded-full ${done ? 'bg-brand-primary' : isToday ? 'bg-amber-300' : isFuture ? 'bg-gray-200' : 'bg-gray-100'}`} />
+                    <p className="text-[10px] text-gray-400 mt-1 text-center">D{dayNumber}</p>
+                  </div>
+                );
+              })}
+            </div>
+            {highlightReflection && (
+              <div className="mt-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-3">
+                <p className="text-[11px] uppercase text-brand-primary font-bold">Highlight da semana</p>
+                <p className="text-sm text-brand-text font-semibold">{highlightReflection.title}</p>
+                <p className="text-xs text-gray-600 line-clamp-2">{highlightReflection.text}</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {activeMission ? (
           <DailyMission 
@@ -201,6 +299,18 @@ const App = () => {
           <div className="text-center py-10 bg-white rounded-3xl p-8 shadow-sm">
              <h2 className="font-serif text-2xl text-brand-primary">Mês Concluído!</h2>
              <p className="text-gray-500 mt-2">Você completou o ciclo de {CURRENT_MONTH_THEME}.</p>
+          </div>
+        )}
+
+        {isCompleted && activeMission && (
+          <div className="bg-gradient-to-r from-brand-primary/10 to-brand-secondary/10 border border-brand-primary/20 rounded-2xl p-4 shadow-sm card-padding flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Próximo passo sugerido</p>
+              <p className="text-sm text-brand-text">{NEXT_STEP_SUGGESTIONS[activeMission.day % NEXT_STEP_SUGGESTIONS.length]}</p>
+            </div>
+            <Button variant="outline" className="border-brand-primary text-brand-primary hover:bg-brand-primary/10" onClick={shareSuggestion}>
+              Compartilhar com parceiro(a)
+            </Button>
           </div>
         )}
 
@@ -248,6 +358,7 @@ const App = () => {
         </div>
     </div>
   );
+  }
 
   const renderHistoryView = () => {
     // Pagination Logic
