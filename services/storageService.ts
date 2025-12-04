@@ -14,7 +14,6 @@ const disableFirestore = (reason: any) => {
 
 const DEFAULT_USER: UserProgress = {
   name: 'Visitante',
-  email: '',
   startDate: new Date().toISOString(),
   completedMissionIds: [],
   isPremium: false,
@@ -28,7 +27,6 @@ const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
   return {
     name: data.name || 'Visitante',
     partnerName: data.partnerName || '',
-    email: data.email || '',
     startDate: data.startDate || new Date().toISOString(),
     completedMissionIds: Array.isArray(data.completedMissionIds) ? data.completedMissionIds : [],
     isPremium: data.isPremium || false,
@@ -80,7 +78,6 @@ export const getUserData = async (): Promise<UserProgress> => {
                 const initialData: UserProgress = {
                     ...local,
                     name: local.name !== 'Visitante' ? local.name : (user.displayName || 'Usuário'),
-                    email: local.email || user.email || '',
                 };
                 
                 return setDoc(docRef, initialData).then(() => initialData);
@@ -92,7 +89,6 @@ export const getUserData = async (): Promise<UserProgress> => {
         const merged: UserProgress = {
           name: local.name !== 'Visitante' ? local.name : remote.name,
           partnerName: local.partnerName || remote.partnerName || '',
-          email: local.email || remote.email || user?.email || '',
           startDate: local.startDate || remote.startDate,
           completedMissionIds: Array.from(new Set([...(remote.completedMissionIds || []), ...(local.completedMissionIds || [])])),
           isPremium: local.isPremium || remote.isPremium,
@@ -110,16 +106,12 @@ export const getUserData = async (): Promise<UserProgress> => {
 
 export const saveUserData = async (data: UserProgress) => {
   // Always save locally for perceived speed and offline capability
-  const withEmail: UserProgress = {
-    ...data,
-    email: data.email || auth.currentUser?.email || '',
-  };
-  saveLocalData(withEmail);
+  saveLocalData(data);
 
   const user = auth.currentUser;
   if (user && FIRESTORE_AVAILABLE) {
       try {
-        await setDoc(doc(db, "users", user.uid), withEmail, { merge: true });
+        await setDoc(doc(db, "users", user.uid), data, { merge: true });
       } catch (e) {
         disableFirestore(e);
       }
@@ -144,7 +136,6 @@ export const updateUserProfile = async (name: string, partnerName: string): Prom
   const user = getLocalData();
   user.name = name;
   user.partnerName = partnerName;
-  user.email = user.email || auth.currentUser?.email || '';
   user.startDate = user.startDate || new Date().toISOString();
   await saveUserData(user);
   return user;
