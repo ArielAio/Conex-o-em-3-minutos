@@ -4,14 +4,30 @@ import { LandingPage } from './LandingPage';
 
 type View = 'landing' | 'app';
 
-const LANDING_PATH = '/invite';
-const APP_PATH = '/app';
+const LANDING_HASH = '#/invite';
+const APP_HASH = '#/app';
 const STORAGE_KEY = 'ce3m:last-view';
+
+const normalizePathToHash = () => {
+  const { pathname, hash } = window.location;
+  if (!hash && (pathname === '/app' || pathname === '/invite')) {
+    const target = pathname === '/app' ? APP_HASH : LANDING_HASH;
+    window.history.replaceState(null, '', target);
+  }
+  if (!hash && pathname === '/') {
+    window.history.replaceState(null, '', LANDING_HASH);
+  }
+};
 
 const detectInitialView = (): View => {
   if (typeof window === 'undefined') return 'landing';
-  const path = window.location.pathname.toLowerCase();
-  if (path.startsWith(APP_PATH)) return 'app';
+  normalizePathToHash();
+  const hash = window.location.hash.toLowerCase();
+  // Hash tem prioridade: se a pessoa digitou #/invite, respeita, mesmo com storage.
+  if (hash.includes('/app')) return 'app';
+  if (hash.includes('/invite')) return 'landing';
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  if (stored === 'app') return 'app';
   return 'landing';
 };
 
@@ -20,18 +36,12 @@ export const Root: React.FC = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const path = window.location.pathname;
-
-    // Keep the landing page on /convite (also catch root) without forcing a reload.
-    if (view === 'landing' && path !== LANDING_PATH) {
-      window.history.replaceState(null, '', LANDING_PATH);
+    const nextHash = view === 'app' ? APP_HASH : LANDING_HASH;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', nextHash);
     }
-
     if (view === 'app') {
       window.localStorage.setItem(STORAGE_KEY, 'app');
-      if (path !== APP_PATH) {
-        window.history.replaceState(null, '', APP_PATH);
-      }
     }
   }, [view]);
 
