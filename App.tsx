@@ -29,6 +29,13 @@ const formatToday = () => {
   return today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 };
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Bom dia';
+  if (hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+};
+
 const App = () => {
   const [user, setUser] = useState<UserProgress | null>(null);
   const [currentDay, setCurrentDay] = useState(1);
@@ -165,7 +172,7 @@ const App = () => {
   const renderMissionView = () => (
     <div className="space-y-6 md:space-y-8">
         <header className="mb-4">
-            <h1 className="font-serif heading-lg text-brand-text leading-tight">Bom dia, {user.name.split(' ')[0]}</h1>
+            <h1 className="font-serif heading-lg text-brand-text leading-tight">{getGreeting()}, {user.name.split(' ')[0]}</h1>
             <p className="text-gray-500 text-xs sm:text-sm">{formatToday()}</p>
         </header>
 

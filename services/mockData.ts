@@ -1,8 +1,22 @@
 import { Mission, Theme } from '../types';
 
+const LONG_SUFFIXES = [
+  ' Termine contando em uma frase o que sentiram e o que querem repetir amanhã.',
+  ' Fechem com uma micro-ação concreta para manter essa sensação no dia seguinte.',
+  ' Antes de encerrar, anotem em 1 linha o que aprendem sobre o outro e como isso muda o clima de vocês.',
+];
+
+const enrichInsights = (insights: string[]): string[] =>
+  insights.map((text, idx) => {
+    const suffix = LONG_SUFFIXES[idx % LONG_SUFFIXES.length];
+    const trimmed = text.trim();
+    const hasPunctuation = /[.!?]"?$/.test(trimmed);
+    return hasPunctuation ? `${trimmed}${suffix}` : `${trimmed}.${suffix}`;
+  });
+
 const withInsights = (mission: Omit<Mission, 'insights'>, insights: string[]): Mission => ({
   ...mission,
-  insights,
+  insights: enrichInsights(insights),
 });
 
 export const MISSIONS: Mission[] = [
@@ -17,16 +31,12 @@ export const MISSIONS: Mission[] = [
       quote: "O silêncio compartilhado é a linguagem da intimidade."
     },
     [
-      "Olhar sustentado sinaliza segurança e reduz o ritmo interno.",
-      "Dois minutos de silêncio conjunto valem mais que um dia de distrações.",
-      "Respirar junto sincroniza sistemas nervosos e baixa a ansiedade.",
-      "Quando você encara, convida vulnerabilidade; quando foge, alimenta ruído.",
-      "Antes de falar, experimente sentir: o corpo entende primeiro.",
-      "Silêncio não é vazio; é espaço para perceber o outro sem filtros.",
-      "Contemplar o rosto do parceiro reativa memórias de quando tudo começou.",
-      "O olho recebe mensagens que a boca não consegue pronunciar.",
-      "Fitar o outro por 120 segundos cria um micro ritual de presença.",
-      "A intimidade cresce onde há espaço seguro para apenas existir."
+      "Olhar sustentado reduz batimentos e sinaliza segurança; use um cronômetro para não apressar.",
+      "Respirar no mesmo ritmo acalma o sistema nervoso e tira o casal do modo de defesa.",
+      "Evite rir por nervoso: se vier, só volte a focar na respiração; a ideia é presença, não perfeição.",
+      "O contato visual prolongado resgata a sensação de 'eu te vejo' que se perde na rotina.",
+      "Dois minutos de silêncio valem mais do que um dia de conversa apressada.",
+      "Antes de falar, permita sentir: o corpo entende primeiro, a cabeça vem depois."
     ]
   ),
   withInsights(
@@ -40,16 +50,12 @@ export const MISSIONS: Mission[] = [
       quote: "O que é admirado, floresce."
     },
     [
-      "Elogios genéricos soam protocolo; elogios específicos soam verdade.",
-      "Detalhe por que você admira: o porquê mostra que você estava atento.",
-      "Apreciação é um antídoto diário contra a erosão da rotina.",
-      "Ser visto em detalhes reforça que você é lembrado e não apenas tolerado.",
-      "Elogiar esforço, não só resultado, incentiva parceria contínua.",
-      "Um bom elogio traz contexto, emoção e consequência positiva.",
-      "O cérebro registra melhor o elogio associado a um momento concreto.",
-      "Quando você diz 'por quê', você abre uma janela do seu olhar interno.",
-      "A repetição de apreciação específica vira cultura do casal.",
-      "Reconhecimento frequente constrói imunidade contra críticas futuras."
+      "Elogios detalhados soam verdadeiros: cite o gesto e o impacto que teve em você.",
+      "Foque em esforço e caráter, não só em resultado; isso motiva continuidade.",
+      "Olhe nos olhos ao elogiar: o corpo reforça a mensagem e evita mal-entendidos.",
+      "Evite 'você é incrível' e prefira 'quando você fez X, me senti cuidado porque...'.",
+      "Elogio frequente cria colchão emocional que protege em momentos tensos.",
+      "Apreciação reduz defensividade e abre espaço para conversas difíceis depois."
     ]
   ),
   withInsights(
@@ -63,16 +69,12 @@ export const MISSIONS: Mission[] = [
       quote: "Escutar é abraçar com atenção."
     },
     [
-      "Perguntas novas desbloqueiam histórias que o 'como foi o dia?' não alcança.",
-      "Um minuto marcante revela valores e desejos escondidos.",
-      "Escuta sem interrupção é prova prática de respeito.",
-      "Quando você não interrompe, o outro organiza o próprio pensamento com segurança.",
-      "Perguntar 'por quê' aprofunda, mas só funciona se houver paciência no silêncio.",
-      "O melhor minuto pode parecer simples; é aí que mora o significado verdadeiro.",
-      "Escuta ativa: olhe, acene, repita uma palavra-chave para mostrar presença.",
-      "Curiosidade genuína reconstrói pontes afetivas desgastadas.",
-      "Boas perguntas mudam a energia de um dia inteiro.",
-      "Ouvir a alegria do outro aumenta a sensação de time."
+      "Perguntas novas tiram o cérebro do piloto automático e revelam o que importa de verdade.",
+      "Ouvir sem interromper diminui o cortisol do outro e aumenta a sensação de ser acolhido.",
+      "Quando a pessoa explica o porquê, você entende valores e necessidades escondidas.",
+      "Faça contato visual e devolva uma palavra-chave para mostrar que está presente.",
+      "Silêncio na resposta não é rejeição: é processamento; espere antes de comentar.",
+      "Curiosidade genuína aproxima mais do que conselhos rápidos."
     ]
   ),
   withInsights(
@@ -86,16 +88,12 @@ export const MISSIONS: Mission[] = [
       quote: "Um abraço longo é um lar temporário."
     },
     [
-      "20 segundos é tempo suficiente para liberar ocitocina: hormônio do vínculo.",
-      "Abraçar sem pressa reprograma o corpo para sentir segurança.",
-      "A pausa do toque longo diz: você importa, sem palavras.",
-      "Respirar junto no abraço acerta o ritmo cardíaco dos dois.",
-      "Abraço longo é diferente de beijo rápido: ele comunica estabilidade.",
-      "Postura relaxada no abraço sinaliza entrega; ombros tensos sinalizam defesa.",
-      "Abraços frequentes são investimento na conta emocional.",
-      "Não preencha o silêncio do abraço; ele é a mensagem.",
-      "Um abraço comprido às vezes resolve o que discussões não resolvem.",
-      "Comece e termine o dia com um abraço e veja o humor mudar."
+      "Vinte segundos liberam ocitocina, o hormônio do vínculo; segure firme e respire fundo.",
+      "Abraço longo comunica 'você está seguro comigo' sem precisar de palavras.",
+      "Afrouxe os ombros e deixe o corpo pesar: isso sinaliza confiança.",
+      "Use este abraço como reinício depois de um dia tenso antes de conversar.",
+      "Abraços consistentes criam memória corporal de calma para momentos de crise.",
+      "Termine com um 'obrigado por estar aqui'; verbalizar reforça o gesto."
     ]
   ),
   withInsights(
@@ -109,16 +107,12 @@ export const MISSIONS: Mission[] = [
       quote: "A gratidão transforma o que temos em suficiente."
     },
     [
-      "A gratidão noturna encerra o dia com memória positiva.",
-      "Agradecer comportamentos reforça que eles se repitam.",
-      "Gratidão reduz ruminação: você vai dormir com foco no que deu certo.",
-      "Cada 'obrigado' específico vale como mini-recompensa emocional.",
-      "Parar para notar o cuidado do outro combate a sensação de rotina vazia.",
-      "Gratidão é ação preventiva contra o acúmulo de mágoas.",
-      "Dizer 'vi quando você fez X' valida o esforço invisível.",
-      "Apreço recorrente forma um colchão emocional para dias difíceis.",
-      "Ser grato pelo pequeno mostra maturidade no vínculo.",
-      "Gratidão sincera aproxima mais que qualquer presente caro."
+      "Fechar o dia com gratidão reduz ruminação e melhora o sono dos dois.",
+      "Agradeça pelo comportamento e pelo esforço por trás dele para reforçar repetição.",
+      "Use frases curtas: 'hoje, quando você fez X, me senti Y'.",
+      "Gratidão diária constrói cultura de reconhecimento e dilui pequenas mágoas.",
+      "Ser visto por algo pequeno previne a sensação de que nada é notado.",
+      "Registrar mentalmente três motivos de gratidão protege contra o viés negativo."
     ]
   ),
   withInsights(
@@ -132,16 +126,12 @@ export const MISSIONS: Mission[] = [
       quote: "Sonhos pequenos construídos viram grandes laços."
     },
     [
-      "Planos pequenos cabem na agenda e geram sensação de progresso.",
-      "Quando agendam algo, vocês dizem 'somos prioridade'.",
-      "Planejar leveza vale mais do que esperar a viagem perfeita.",
-      "Compromisso com micro-rituais cria identidade do casal.",
-      "Um mini plano quebra a inércia e puxa energia de ação.",
-      "Agenda compartilhada evita frustrações de última hora.",
-      "Alinhar expectativas evita a sensação de 'você não liga'.",
-      "Pequenos planos criam memória e piadas internas.",
-      "Planejar juntos gera pertença: 'nós decidimos'.",
-      "Não subestime um café de 15 minutos: é um check-in afetivo."
+      "Planos pequenos cabem na agenda e evitam frustração de planos grandiosos que nunca saem.",
+      "Escolher juntos cria sensação de equipe e compromisso compartilhado.",
+      "Coloque no calendário com horário: sem data vira boa intenção esquecida.",
+      "Uma microatividade semanal mantém o casal em modo namoro, não só gestão de tarefas.",
+      "Planejar algo leve diminui a pressão e aumenta a chance de virar hábito.",
+      "Revisem depois como se sentiram para ajustar próximos encontros."
     ]
   ),
   withInsights(
@@ -155,16 +145,12 @@ export const MISSIONS: Mission[] = [
       quote: "Culpa fecha, vulnerabilidade abre."
     },
     [
-      "Falar no 'eu' reduz defesa e abre espaço para o outro ouvir.",
-      "'Você sempre...' vira ataque; 'Eu sinto...' vira convite.",
-      "Sentimento + contexto é mais claro que acusação.",
-      "Quem descreve sensação em vez de culpar constrói pontes.",
-      "Vulnerabilidade é risco, mas é o caminho para intimidade real.",
-      "Quando você fala do que sente, o outro enxerga sua intenção, não só o erro.",
-      "A escuta depois do seu 'eu sinto' é metade da cura.",
-      "Evite generalizações: foque no episódio, não na pessoa.",
-      "Pedir mudança é diferente de culpar; formule como pedido claro.",
-      "Corretor de culpa corrige pouco; clareza de sentimento transforma."
+      "Usar 'eu sinto' em vez de 'você sempre' evita defesa e abre espaço para escuta.",
+      "Descreva o fato e a emoção: 'quando X aconteceu, me senti Y'; clareza é cuidado.",
+      "Peça uma ação específica em vez de listar erros; pedidos são mais fáceis de atender.",
+      "Ouça a resposta sem interromper; a validação vem antes da solução.",
+      "Generalizações ('sempre/nunca') aumentam conflito; foque no episódio.",
+      "Validar o sentimento do outro não significa concordar, significa reconhecer."
     ]
   ),
   withInsights(
@@ -178,16 +164,12 @@ export const MISSIONS: Mission[] = [
       quote: "Pequenos gestos sustentam grandes histórias."
     },
     [
-      "Segurar mãos ativa sensação de 'estamos juntos' física e mental.",
-      "Toque + relato bom ancoram a memória em conforto.",
-      "O cérebro associa o toque à narrativa positiva contada.",
-      "Mãos dadas acalmam a mente em dias cheios.",
-      "Esse micro-ritual combate o piloto automático no fim do dia.",
-      "Pequeno gesto, grande sinal de disponibilidade.",
-      "Mãos quentes transmitem cuidado sem precisar de discurso.",
-      "O toque evita que a conversa vire só logística.",
-      "Encurtar distância física reduz distância emocional.",
-      "Gesto simples é mais sustentável que grandes demonstrações raras."
+      "Mãos dadas dizem 'estou aqui' sem discursos; acalmam o sistema nervoso.",
+      "Associe toque a uma história boa: o cérebro grava o carinho junto com a lembrança.",
+      "Foque no toque: sinta textura e temperatura para ficar presente.",
+      "Um minuto é curto o suficiente para caber em qualquer rotina.",
+      "Segurar mãos em dias difíceis lembra que existe um time, não só um problema.",
+      "Evite falar de logística nesse momento; mantenha leveza e gratidão."
     ]
   ),
   withInsights(
@@ -201,16 +183,12 @@ export const MISSIONS: Mission[] = [
       quote: "Ser visto é ser amado em ação."
     },
     [
-      "Esforços invisíveis pedem reconhecimento explícito.",
-      "Agradecer energia gasta demonstra que você percebe bastidores.",
-      "Validação reduz sensação de sobrecarga silenciosa.",
-      "Atenção ao detalhe cria cultura de colaboração.",
-      "Sem reconhecimento, o esforço vira ressentimento.",
-      "A palavra 'vi você fazendo X' é mais forte que 'valeu'.",
-      "Esforço visto gera vontade de continuar contribuindo.",
-      "A falta de reconhecimento diminui motivação com o tempo.",
-      "Agradecer o invisível ensina que nada é obrigação automática.",
-      "Ver o outro é cuidar do vínculo, não só da tarefa."
+      "Esforços invisíveis viram mágoa quando ninguém nota; nomeie o gesto e a intenção.",
+      "Fale do impacto: 'quando você fez X, fiquei mais tranquilo para Y'.",
+      "Reconhecer bastidores distribui justiça emocional e motivação.",
+      "A falta de reconhecimento é uma das maiores fontes de ressentimento em casais.",
+      "Gratidão por tarefas domésticas reduz sensação de sobrecarga mental.",
+      "Ser visto pelo que ninguém vê reforça parceria em vez de contabilidade."
     ]
   ),
   withInsights(
@@ -224,16 +202,12 @@ export const MISSIONS: Mission[] = [
       quote: "Celebrar pequenas vitórias prepara terreno para as grandes."
     },
     [
-      "Celebrar o micro ensina o cérebro a procurar o que funciona.",
-      "Vitórias pequenas evitam a sensação de 'nada anda'.",
-      "Brinde simples ainda é ritual poderoso.",
-      "Celebrar juntos fortalece a identidade do time.",
-      "Memória de vitória vira combustível para desafios maiores.",
-      "Registre: foto, áudio, bilhete. Assim a vitória dura mais.",
-      "Pequenas conquistas são a base de grandes conquistas.",
-      "Quem celebra o caminho não depende só da linha de chegada.",
-      "Comemorar evita que o esforço se perca na rotina.",
-      "Rituais de celebração aumentam motivação e prazer compartilhado."
+      "Celebrar o micro treina o cérebro a procurar o que funciona, não só problemas.",
+      "Rituais de vitória liberam dopamina e aumentam motivação para próximos passos.",
+      "Não espere conquista gigante; a consistência diária é o que segura o relacionamento.",
+      "Registrar com foto ou áudio cria memória positiva para dias difíceis.",
+      "Compartilhar a vitória reforça identidade de time e diminui comparação.",
+      "Comemorar o progresso evita sensação de estagnação e fortalece o vínculo."
     ]
   ),
   withInsights(
@@ -247,16 +221,12 @@ export const MISSIONS: Mission[] = [
       quote: "Escutar é doar tempo sem interrupção."
     },
     [
-      "Tempo delimitado evita interrupção e dá segurança para falar.",
-      "Revezar microfone é treino de respeito e curiosidade.",
-      "Quando você não interrompe, o outro se aprofunda.",
-      "Escuta de 5 minutos revela paixões e interesses esquecidos.",
-      "Falar do que gosta aumenta energia positiva no casal.",
-      "Revezamento mostra que ambos têm espaço igual.",
-      "Ouvir sobre o hobby do outro cria novas conexões entre vocês.",
-      "Evite comentários; pratique apenas presença.",
-      "Esse exercício ensina ritmo de diálogo saudável.",
-      "Alternar fala e escuta é ginástica emocional."
+      "Tempo delimitado dá segurança para falar sem ser cortado e sem pressa.",
+      "Ouvir sobre o que o outro ama revela valores e desejos fora da rotina.",
+      "Evite comentários e conselhos: apenas sinalize que está acompanhando.",
+      "Revezar a fala mostra que ambos têm espaço igual; isso reduz sentimento de abandono.",
+      "Use um timer para respeitar o tempo e evitar interrupções por ansiedade.",
+      "Depois, agradeça a partilha; reconhecimento é parte da escuta ativa."
     ]
   ),
   withInsights(
@@ -270,16 +240,12 @@ export const MISSIONS: Mission[] = [
       quote: "O olfato guarda chaves do coração."
     },
     [
-      "Cheiros despertam memórias com mais força que imagens.",
-      "Compartilhar lembrança olfativa cria nostalgia positiva.",
-      "Perfume, café ou travesseiro são âncoras afetivas rápidas.",
-      "Histórias ligadas a cheiro são únicas e pessoais.",
-      "Olfato ativa emoção mais rápido que raciocínio.",
-      "Relembrar via cheiro renova a conexão com o passado de vocês.",
-      "Cheiro também comunica cuidado (roupa limpa, ambiente acolhedor).",
-      "Traga um aroma que marcou o início de vocês e conte por quê.",
-      "Aromas suaves acalmam e preparam terreno para boas conversas.",
-      "Memórias olfativas viram gatilhos de carinho no dia a dia."
+      "Aromas acessam emoção mais rápido que palavras; use isso a seu favor.",
+      "Memórias olfativas criam nostalgia positiva e reativam o começo da relação.",
+      "Compartilhar a história por trás do cheiro mostra vulnerabilidade e afeto.",
+      "Perfume, café ou travesseiro viram âncoras emocionais para dias corridos.",
+      "Cheiros podem ser gatilhos de cuidado: associe um aroma a um momento de calma.",
+      "Revisitar um cheiro do início de vocês reforça a sensação de escolha mútua."
     ]
   ),
   withInsights(
@@ -293,16 +259,12 @@ export const MISSIONS: Mission[] = [
       quote: "Amar é olhar juntos na mesma direção."
     },
     [
-      "Desejos revelam valores e prioridades atuais.",
-      "Escolher um desejo comum reduz frustração e aumenta foco.",
-      "Listas curtas evitam paralisia de opções.",
-      "Compartilhar desejos é convite à vulnerabilidade.",
-      "Desejos divergentes são oportunidade de conversa, não de disputa.",
-      "Anotar evita que a rotina apague o que vocês querem construir.",
-      "Um desejo cumprido gera confiança para os próximos.",
-      "Desejos mostram o que faz sentido hoje, não só no futuro distante.",
-      "Planejar juntos cria sensação de time estratégico.",
-      "Desejos pequenos realizados constroem confiança no casal."
+      "Desejos revelam valores atuais; alinhar evita surpresas e frustrações.",
+      "Escolher um desejo comum cria foco e senso de conquista compartilhada.",
+      "Listas curtas evitam paralisia de escolha e aumentam execução.",
+      "Desejos divergentes são convite para negociar, não brigar.",
+      "Anotar torna o plano concreto e rastreável; sem registro vira promessa vazia.",
+      "Cumprir um desejo juntos aumenta confiança de que vocês conseguem em dupla."
     ]
   ),
   withInsights(
@@ -316,16 +278,12 @@ export const MISSIONS: Mission[] = [
       quote: "Memória compartilhada fortalece o hoje."
     },
     [
-      "Um áudio curto vira cápsula de memória acessível depois.",
-      "Lembrar bons momentos reforça o motivo de estarem juntos.",
-      "60 segundos forçam foco no essencial da história.",
-      "Memória falada aciona emoção mais que texto.",
-      "Gravar no mesmo dia evita procrastinar o afeto.",
-      "Ouvir a voz do parceiro contando lembra o tom de carinho.",
-      "Histórias contadas criam arquivo emocional do casal.",
-      "Essa gravação pode ser resgatada em dias difíceis.",
-      "Recontar um momento reativa sensações boas no corpo.",
-      "Narrar juntos é coautorizar a história de vocês."
+      "Um áudio curto vira cápsula de memória que pode ser ouvida em momentos difíceis.",
+      "Relembrar o porquê aproxima e resgata emoção do início da relação.",
+      "Sessenta segundos forçam foco no essencial, sem discursos longos.",
+      "Ouvir a voz do outro contando a história reacende o afeto.",
+      "Guardar o áudio cria um acervo de provas de carinho para revisitar.",
+      "Recontar boas lembranças reduz a sensação de que o presente é só problema."
     ]
   ),
   withInsights(
@@ -339,16 +297,12 @@ export const MISSIONS: Mission[] = [
       quote: "Ver o ser, não só o fazer."
     },
     [
-      "Elogiar caráter valida a essência, não só tarefas.",
-      "Traço de personalidade é mais estável que comportamento isolado.",
-      "Reconhecer o ser cria senso de identidade apreciada.",
-      "Falar 'gosto de como você...' mostra admiração, não cobrança.",
-      "Traços positivos lembrados geram autoestima no parceiro.",
-      "Elogios de caráter são combustível em fases de cansaço.",
-      "Olhar além do fazer reduz a lógica transacional do relacionamento.",
-      "Quando o outro se sente admirado, ele oferece mais do melhor dele.",
-      "Validação do ser cura inseguranças antigas.",
-      "Isso reforça que vocês se veem como pessoas, não funções."
+      "Elogiar traços de caráter mostra que você valoriza quem a pessoa é, não só o que entrega.",
+      "Admiração pelo ser alimenta autoestima e reduz comparação tóxica.",
+      "Traços são estáveis; reconhecer isso dá sensação de ser amado sem condicionais.",
+      "Use exemplos: 'gosto de como você traz leveza quando a casa está caótica'.",
+      "Ver o ser diminui a lógica transacional e aumenta parceria genuína.",
+      "Ser admirado pelo caráter incentiva a pessoa a oferecer mais do melhor dela."
     ]
   ),
   withInsights(
@@ -362,16 +316,12 @@ export const MISSIONS: Mission[] = [
       quote: "Atenção é a moeda do afeto."
     },
     [
-      "15 minutos sem tela já reduzem sensação de isolamento.",
-      "Mesa sem celular comunica: você é mais importante que notificações.",
-      "Silêncio junto também é presença; não precisa preencher tudo.",
-      "Micro detox digital reabre espaço para perceber o outro.",
-      "Olho no olho devolve nuances que a tela rouba.",
-      "Refeição sem tela vira ritual de reconexão diário.",
-      "Essa prática protege o casal da distração crônica.",
-      "Você reeduca o cérebro a não buscar dopamina no celular.",
-      "Tempo de qualidade é mais sobre foco do que duração.",
-      "Desligar tela é gesto prático de respeito."
+      "Quinze minutos sem tela já diminuem a sensação de isolamento dentro de casa.",
+      "Guardar o celular comunica com o corpo que o outro é prioridade agora.",
+      "Silêncio compartilhado vale tanto quanto papo; não force assunto para preencher.",
+      "Refeição sem distração melhora digestão emocional: vocês digerem o dia juntos.",
+      "Criar um espaço livre de notificações reduz tensão e evita discussões por 'falta de atenção'.",
+      "Micro detox diário treina o cérebro a buscar conexão humana antes do feed."
     ]
   ),
   withInsights(
@@ -385,16 +335,12 @@ export const MISSIONS: Mission[] = [
       quote: "Consentimento e cuidado andam juntos."
     },
     [
-      "Perguntar onde tocar é ato de respeito e curiosidade.",
-      "Toque consciente é diferente de toque automático.",
-      "Preferências mudam; perguntar evita suposições antigas.",
-      "Respeitar limites aumenta confiança para futuras explorações.",
-      "Mapa do corpo é conversa, não só gesto físico.",
-      "Perguntar 'aqui está bom?' comunica cuidado.",
-      "Tocar devagar permite ao corpo relaxar e responder.",
-      "Linguagem corporal é resposta honesta: observe.",
-      "Consentimento reforçado gera intimidade mais livre.",
-      "O corpo do outro é território sagrado; entre com gentileza."
+      "Perguntar onde tocar mostra respeito e evita repetir gestos que não agradam mais.",
+      "Preferências mudam com o tempo; atualizar o 'mapa' mantém a intimidade viva.",
+      "Toque lento e pedido de feedback ('aqui está bom?') reduzem ansiedade.",
+      "Consentimento explícito gera confiança e liberdade para explorar mais no futuro.",
+      "Observar linguagem corporal ajuda a ajustar pressão e ritmo sem precisar adivinhar.",
+      "Gentileza no toque comunica: 'eu cuido de você', não 'eu tomo de você'."
     ]
   ),
   withInsights(
@@ -408,16 +354,12 @@ export const MISSIONS: Mission[] = [
       quote: "Planejar prazer é investir no vínculo."
     },
     [
-      "Uma mini-saída corta a rotina e injeta novidade.",
-      "Marcar no calendário evita que a semana engula o casal.",
-      "30 minutos bem vividos renovam a sensação de namoro.",
-      "Planejar prazer mostra intenção de cuidar da relação.",
-      "Sair do ambiente comum muda o clima mental.",
-      "Data curta reduz desculpas de falta de tempo.",
-      "Expectativa compartilhada já aumenta dopamina.",
-      "Repetir datas curtas cria consistência afetiva.",
-      "Não precisa luxo; precisa presença e leveza.",
-      "Encontros agendados evitam cair só na logística da casa."
+      "Datas curtas são mais sustentáveis e evitam a desculpa de falta de tempo.",
+      "Sair de casa muda o cenário mental e reduz a sensação de rotina pesada.",
+      "Antecipar a saída cria dopamina e melhora o humor antes mesmo de acontecer.",
+      "Mantenha simples: objetivo é rir e conversar, não produzir perfeição.",
+      "Repetir esse hábito semanal cria consistência afetiva.",
+      "Proteja o horário como protegeria uma reunião importante: isso mostra prioridade."
     ]
   ),
   withInsights(
@@ -431,16 +373,12 @@ export const MISSIONS: Mission[] = [
       quote: "Claridade é carinho."
     },
     [
-      "Pedido claro evita desgaste de adivinhação.",
-      "Gentileza no tom aumenta chance de colaboração.",
-      "Especificar o quê e quando reduz conflito futuro.",
-      "Suposições geram frustração; clareza gera parceria.",
-      "Pedir é ato de confiança, não de fraqueza.",
-      "Receber um pedido claro é mais fácil que interpretar indiretas.",
-      "Combine expectativas diárias para reduzir atrito.",
-      "Pequenos pedidos alinhados evitam grandes discussões.",
-      "Use frases curtas e positivas: 'gostaria que você...'.",
-      "Clareza poupa energia emocional dos dois."
+      "Pedidos claros evitam a frustração de ter que adivinhar o que o outro quer.",
+      "Seja específico: o quê, quando e por quê; isso reduz conflito e aumenta colaboração.",
+      "Tom gentil aumenta a chance de concordância; foco no comportamento, não na pessoa.",
+      "Receber um pedido direto é mais fácil do que interpretar indiretas.",
+      "Combinar expectativas diárias tira pressão de conversas longas no final do dia.",
+      "Clareza poupa energia emocional e evita contabilidade de 'quem faz mais'."
     ]
   ),
   withInsights(
@@ -454,16 +392,12 @@ export const MISSIONS: Mission[] = [
       quote: "O invisível sustenta o visível."
     },
     [
-      "Bastidores não reconhecidos viram ressentimento.",
-      "Ver o invisível é dizer: 'eu te percebo'.",
-      "Aplauso ao que não aparece reforça senso de justiça.",
-      "Tarefas invisíveis mantêm a casa e o vínculo funcionando.",
-      "Agradecer o invisível dá dignidade ao esforço silencioso.",
-      "Quem é visto se sente parte, não apenas servindo.",
-      "Reconhecer bastidor previne a contabilidade de mágoas.",
-      "A cultura de gratidão começa no detalhe.",
-      "Aplauso genuíno reduz a sensação de carga desigual.",
-      "Valorizar o invisível valoriza a pessoa inteira."
+      "Reconhecer tarefas invisíveis previne ressentimento por carga mental.",
+      "Fale da tarefa e do efeito: 'quando você fez X, fiquei mais leve para Y'.",
+      "Ver o bastidor mostra que vocês são um time, não um fiscal do outro.",
+      "Gratidão por pequenas coisas mantém a balança emocional equilibrada.",
+      "Ignorar o invisível leva à sensação de injustiça silenciosa.",
+      "Aplauso sincero aumenta motivação e vontade de manter o cuidado."
     ]
   ),
   withInsights(
@@ -477,16 +411,12 @@ export const MISSIONS: Mission[] = [
       quote: "Quem celebra o pouco recebe o muito."
     },
     [
-      "Brinde simbólico transforma rotina em ritual.",
-      "Celebrar algo simples treina o olhar para o que já está bom.",
-      "Foto do brinde vira recordação do cuidado diário.",
-      "O ato do brinde cria micro-memórias felizes.",
-      "Celebrar o nada combate a sensação de escassez.",
-      "Brindar com água ou chá prova que intenção vale mais que luxo.",
-      "Registro visual ajuda a lembrar em dias difíceis.",
-      "Rituais simples constroem cultura do casal.",
-      "Brinde diário é âncora para o humor.",
-      "Quem celebra o cotidiano se protege do tédio."
+      "Brindar o cotidiano treina o olhar para abundância em vez de falta.",
+      "Rituais simples criam âncoras de leveza e evitam que a relação vire só logística.",
+      "Uma foto do brinde registra a cultura de celebração que vocês estão criando.",
+      "Celebrar algo pequeno protege contra a sensação de estagnação.",
+      "A forma não importa (água, chá); a intenção de marcar importa.",
+      "Brinde diário pode virar código do casal para 'sobrevivemos juntos hoje'."
     ]
   ),
   withInsights(
@@ -500,16 +430,12 @@ export const MISSIONS: Mission[] = [
       quote: "Respirar junto é lembrar que são equipe."
     },
     [
-      "Respiração sincronizada regula o estresse dos dois.",
-      "É um lembrete corporal de que vocês são time.",
-      "Dois minutos de foco no ar que entra e sai acalmam.",
-      "Respirar junto cria coesão sem precisar de palavras.",
-      "Ritmo compartilhado melhora escuta depois.",
-      "Esse exercício simples é poderoso para reconectar.",
-      "Respirar junto ajuda a sair de discussões acaloradas.",
-      "O corpo entende a mensagem: estamos em sintonia.",
-      "Respiração é ponte entre mente e emoção.",
-      "Faça antes de conversas difíceis ou antes de dormir."
+      "Respiração sincronizada baixa o ritmo cardíaco e reduz estresse dos dois.",
+      "Use contagem 4-4 (inala 4, exala 4) para facilitar o alinhamento.",
+      "Essa prática antes de conversas difíceis evita reatividade.",
+      "O corpo entende a mensagem de 'estamos juntos' antes da cabeça.",
+      "Dois minutos são suficientes para resetar o humor e melhorar escuta.",
+      "Respirar junto cria sensação de time mesmo em silêncio."
     ]
   ),
   withInsights(
@@ -523,16 +449,12 @@ export const MISSIONS: Mission[] = [
       quote: "Novidade é vitamina para vínculos."
     },
     [
-      "Novidades disparam dopamina e aproximam.",
-      "Fazer algo inédito juntos cria memória única.",
-      "10 minutos são suficientes para quebrar a rotina.",
-      "Novidade tira o casal do piloto automático.",
-      "Explorar algo novo mostra flexibilidade e curiosidade.",
-      "Variedade mantém o vínculo vivo e interessante.",
-      "Pode ser simples: música diferente, receita, documentário.",
-      "O objetivo é rir e explorar, não performar.",
-      "Novidade em pequenas doses é sustentável.",
-      "Cada experiência nova vira história para contar."
+      "Novidade desperta dopamina e aumenta o interesse mútuo.",
+      "Dez minutos de algo inédito já quebram a rotina sem exigir logística.",
+      "Escolham algo leve para reduzir perfeccionismo e aumentar diversão.",
+      "Novas experiências criam histórias internas e piadas do casal.",
+      "Explorar juntos mostra flexibilidade e disposição para aprender.",
+      "Variedade impede que a relação vire só repetição de tarefas."
     ]
   ),
   withInsights(
@@ -546,16 +468,12 @@ export const MISSIONS: Mission[] = [
       quote: "Apoio não é consertar; é sustentar."
     },
     [
-      "Perguntar necessidade evita oferecer ajuda errada.",
-      "Às vezes o outro só quer ser ouvido, não consertado.",
-      "Esclarecer 'apoio ou solução?' economiza energia.",
-      "Respeitar a resposta demonstra cuidado real.",
-      "Forçar solução quando querem apoio gera frustração.",
-      "Apoio é presença; solução é ação. Diferencie.",
-      "Validar o sentir é tão importante quanto resolver.",
-      "Pergunta simples, impacto enorme na comunicação.",
-      "Siga o pedido do outro, não sua ansiedade de resolver.",
-      "Apoio bem dado gera confiança para futuras conversas."
+      "Perguntar o que o outro precisa evita oferecer ajuda errada e frustrações.",
+      "Às vezes a pessoa quer ser ouvida, não consertada; valide antes de agir.",
+      "Apoio é presença e empatia; solução é plano de ação. Separe as duas coisas.",
+      "Seguir o pedido mostra respeito e diminui sensação de ser controlado.",
+      "Validar o sentir reduz defensividade e abre espaço para soluções depois.",
+      "Pergunta simples, efeito grande: menos desgaste e mais conexão."
     ]
   ),
   withInsights(
@@ -569,16 +487,12 @@ export const MISSIONS: Mission[] = [
       quote: "Pequenos bilhetes, grandes ecos."
     },
     [
-      "Bilhetes físicos criam surpresa tangível.",
-      "Mensagem curta bem colocada dura o dia inteiro.",
-      "Ser encontrado por acaso aumenta o efeito do carinho.",
-      "Bilhete prova intenção, não é automatismo digital.",
-      "Palavra escrita vira lembrança guardável.",
-      "Bilhetes frequentes constroem trilha de afeto.",
-      "Escreva específico: o que admira ou agradece.",
-      "Um post-it pode mudar o humor do dia.",
-      "Bilhetes criam cultura de expressão afetiva.",
-      "A escrita força clareza e sinceridade."
+      "Bilhetes físicos surpreendem e viram lembrança palpável.",
+      "Texto curto e específico tem efeito maior que mensagem automática.",
+      "Esconda em locais de uso diário para ser achado sem aviso e mudar o humor.",
+      "Palavras escritas são revisitas possíveis em dias ruins.",
+      "Pequenos gestos frequentes constroem trilha de afeto contínua.",
+      "Um post-it pode ser o reforço que falta para o dia ser mais leve."
     ]
   ),
   withInsights(
@@ -592,16 +506,12 @@ export const MISSIONS: Mission[] = [
       quote: "Rituais selam segurança."
     },
     [
-      "Ritual de fechamento reduz ansiedade noturna.",
-      "Frase padrão cria âncora de segurança.",
-      "Toque suave antes de dormir melhora qualidade do sono.",
-      "Repetição diária consolida o hábito de cuidado.",
-      "Pequeno gesto evita dormir em clima frio.",
-      "Rituais dizem 'aqui é seguro' sem grandes discursos.",
-      "Beijo na testa comunica proteção e ternura.",
-      "Esse ritual protege o vínculo de ruídos do dia.",
-      "Adormecer em sintonia melhora o humor ao acordar.",
-      "Pequenas frases viram mantras afetivos."
+      "Ritual de fechamento reduz ansiedade antes de dormir e melhora o descanso.",
+      "Frase repetida cria âncora de segurança emocional diária.",
+      "Toque suave libera hormônios de calma e quebra o clima de distância.",
+      "Mesmo em dias tensos, manter o ritual evita dormir em clima de guerra.",
+      "Gestos pequenos e consistentes constroem previsibilidade, algo que o cérebro ama.",
+      "Esse hábito protege o vínculo de ruídos acumulados durante o dia."
     ]
   ),
   withInsights(
@@ -615,16 +525,12 @@ export const MISSIONS: Mission[] = [
       quote: "Tempo marcado é compromisso emocional."
     },
     [
-      "Bloquear 30 minutos mostra prioridade real.",
-      "Tempo reservado evita que a semana engula o casal.",
-      "Calendário compartilhado reduz frustrações.",
-      "Investir tempo é dizer 'você importa'.",
-      "30 minutos focados valem mais que horas distraídas.",
-      "Marcar no calendário cria responsabilidade mútua.",
-      "Proteja o horário como protegeria uma reunião importante.",
-      "Planejar o tempo junto é forma de cuidado.",
-      "Tempo é recurso mais valioso; investir nele reforça o vínculo.",
-      "Persistência no agendamento cria hábito de conexão."
+      "Bloquear horário mostra que a relação tem prioridade igual a compromissos de trabalho.",
+      "Calendário compartilhado evita ressentimento de 'você nunca tem tempo'.",
+      "Trinta minutos focados valem mais do que horas com atenção dividida.",
+      "Marcar antecipado reduz cancelamentos por cansaço ou esquecimento.",
+      "Proteger esse tempo ensina aos outros (e a você) que o casal é importante.",
+      "Consistência semanal cria previsibilidade e diminui sensação de abandono."
     ]
   ),
   withInsights(
@@ -638,16 +544,12 @@ export const MISSIONS: Mission[] = [
       quote: "Nomear é diminuir a distância."
     },
     [
-      "Dar nome ao sentir organiza a mente.",
-      "Emoção nomeada perde força de explosão.",
-      "Compartilhar gatilho ajuda o outro a entender contexto.",
-      "Usar palavras simples evita intelectualizar demais.",
-      "Emoções nomeadas criam mapa do dia um do outro.",
-      "Nomear medo/esperança abre espaço para apoio específico.",
-      "Linguagem emocional reduz mal-entendidos.",
-      "Quando você nomeia, o outro acolhe sem adivinhar.",
-      "Falar de emoção é higiene mental do casal.",
-      "Vocabulário emocional rico fortalece o diálogo."
+      "Nomear emoções organiza o cérebro e evita explosões por acúmulo.",
+      "Citar o gatilho ajuda o outro a entender contexto e apoiar melhor.",
+      "Palavras simples funcionam melhor que discursos longos; foque no sentir.",
+      "Quando você nomeia, o outro não precisa adivinhar ou minimizar.",
+      "Vocabulário emocional rico é fator de proteção em casais, segundo pesquisas de comunicação não violenta.",
+      "Falar de emoção diariamente evita efeito panela de pressão."
     ]
   ),
   withInsights(
@@ -661,16 +563,12 @@ export const MISSIONS: Mission[] = [
       quote: "Relembrar é reviver com gratidão."
     },
     [
-      "Top 3 reforça o que deu certo na jornada.",
-      "Motivo do 'por que marcou' revela valores do casal.",
-      "Revisão cria memória organizada e positiva.",
-      "Relembrar bons momentos alimenta resiliência.",
-      "Top 3 é filtro contra negatividade.",
-      "Esses momentos viram histórias de identidade do casal.",
-      "Listar juntos fortalece o sentimento de equipe.",
-      "Revisar o mês evita que conquistas se percam.",
-      "Top 3 pode virar ritual de fim de mês.",
-      "Motivos compartilhados criam alinhamento de prioridades."
+      "Revisar o mês consolida memória positiva e combate viés de negatividade.",
+      "Dizer por que marcou revela valores e necessidades atendidas.",
+      "Top 3 cria narrativa do casal: vocês escolhem quais histórias guardar.",
+      "Revisão ajuda a repetir o que funcionou e ajustar o que não funcionou.",
+      "Compartilhar essas memórias aumenta sensação de time e continuidade.",
+      "Esse ritual é combustível emocional para o próximo mês."
     ]
   ),
   withInsights(
@@ -684,16 +582,12 @@ export const MISSIONS: Mission[] = [
       quote: "O amor é uma construção diária."
     },
     [
-      "Carta ao futuro cria responsabilidade afetiva consigo mesmos.",
-      "Registrar desejos atuais ajuda a medir progresso depois.",
-      "Carta é lembrete de que vocês já venceram este mês.",
-      "Falar do que querem manter vivo protege as conquistas diárias.",
-      "Áudio/carta vira cápsula de motivação para tempos difíceis.",
-      "Mensagem futura reforça que o relacionamento é contínuo.",
-      "Ouvir a própria voz depois reativa intenção e carinho.",
-      "Carta ao futuro marca fechamento de ciclo e abertura de outro.",
-      "Esse ritual ajuda a não deixar o mês virar apenas check-list.",
-      "Projeção positiva alimenta esperança e direção."
+      "Carta ao futuro cria responsabilidade afetiva: vocês prometem algo a si mesmos.",
+      "Registrar desejos e conquistas ajuda a medir progresso e celebrar evolução.",
+      "O áudio/carta vira lembrete em dias difíceis de que vocês já superaram fases.",
+      "Projetar o que querem manter vivo evita que o próximo mês vire piloto automático.",
+      "Ouvir a própria voz depois reativa intenção e compromisso.",
+      "Fechar o mês com carta sinaliza fim de ciclo e começo do próximo com clareza."
     ]
   )
 ].sort((a, b) => a.day - b.day);
