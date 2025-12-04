@@ -9,6 +9,9 @@
       "runtime": "nodejs18.x"
     }
   },
+  "routes": [
+    { "src": "/api/send-daily", "dest": "/api/send-daily.ts" }
+  ],
   "crons": [
     { "path": "/api/send-daily?secret=@cron_secret", "schedule": "0 13 * * *" }
   ]
