@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Mission } from '../types';
 import { Button } from './Button';
 import { CheckCircle, Lock, Sparkles, Share2, ChevronDown, HeartHandshake, Clock } from 'lucide-react';
+import * as htmlToImage from 'html-to-image';
 
 interface DailyMissionProps {
   mission: Mission;
@@ -58,7 +59,9 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   const [insight, setInsight] = useState<string | null>(null);
   const [showAction, setShowAction] = useState(isCompleted);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const particlesCount = isCompleted ? 18 : 0;
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
 
   const heartBursts = useMemo(() => {
     return Array.from({ length: 16 }).map((_, i) => {
@@ -103,22 +106,51 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
     }
   }
 
+  const dataUrlToFile = async (dataUrl: string, filename: string) => {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type });
+  };
+
   const handleShare = async () => {
-    const textToShare = `Acabei de completar a missão "${mission.title}" do Conexão em 3 Minutos! ❤️\n\n"${mission.quote || 'Pequenos gestos mudam tudo.'}"`;
-    
-    if (navigator.share) {
+    const textToShare = `Acabei de completar a missão "${mission.title}" do Conexão em 3 Minutos! ❤️\n\n${insight || '"Pequenos gestos mudam tudo."'}\n\nBaixe e compartilhe sua jornada.`;
+    if (!shareCardRef.current) {
       try {
+        await navigator.share({ title: 'Conexão em 3 Minutos', text: textToShare, url: window.location.href });
+      } catch (error) {
+        console.error('Share fallback error', error);
+        alert('Compartilhe copiando o texto: ' + textToShare);
+      }
+      return;
+    }
+
+    try {
+      setIsSharing(true);
+      const dataUrl = await htmlToImage.toPng(shareCardRef.current, { pixelRatio: 2, cacheBust: true });
+      const file = await dataUrlToFile(dataUrl, 'conexao-missao.png');
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'Conexão em 3 Minutos',
           text: textToShare,
-          url: window.location.href,
+          files: [file],
         });
-      } catch (error) {
-        console.log('Error sharing', error);
+      } else {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = 'conexao-missao.png';
+        link.click();
+        alert('Imagem pronta para compartilhar. Abra sua galeria/WhatsApp e envie.');
       }
-    } else {
-      navigator.clipboard.writeText(textToShare);
-      alert('Mensagem copiada! Envie para seu amor.');
+    } catch (error) {
+      console.error('Erro ao gerar imagem', error);
+      try {
+        await navigator.share({ title: 'Conexão em 3 Minutos', text: textToShare, url: window.location.href });
+      } catch (err) {
+        alert('Não foi possível compartilhar agora. Copie este texto:\n\n' + textToShare);
+      }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -194,10 +226,11 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
           <Button 
             variant="secondary" 
             onClick={handleShare}
+            disabled={isSharing}
             className="mx-auto rounded-full px-6 py-2 text-sm font-medium hover:scale-105 transition-transform bg-brand-bg text-brand-primary border border-brand-primary/20"
           >
             <Share2 className="w-4 h-4 mr-2" />
-            Compartilhar Amor
+            {isSharing ? 'Gerando...' : 'Compartilhar Amor'}
           </Button>
 
         </div>
@@ -207,6 +240,44 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
 
   return (
     <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-brand-primary/10 overflow-hidden transition-all duration-300">
+      {/* Card oculto para gerar imagem de compartilhamento */}
+      <div className="hidden">
+        <div 
+          ref={shareCardRef}
+          className="w-[600px] bg-gradient-to-br from-[#FDFCF8] to-white border border-[#E8E0F0] rounded-3xl shadow-xl overflow-hidden"
+          style={{ fontFamily: '"Playfair Display", serif' }}
+        >
+          <div className="p-6 bg-brand-primary/10 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-brand-accent font-bold">Conexão em 3 Minutos</p>
+              <h2 className="text-3xl text-brand-text mt-1">{mission.title}</h2>
+              <p className="text-sm text-gray-500">Dia {mission.day} • {mission.theme}</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-brand-primary">
+              <HeartHandshake className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="p-6 space-y-4">
+            <p className="text-base text-gray-600 leading-relaxed">{mission.action}</p>
+            {(insight || (mission.insights && mission.insights.length)) && (
+              <div className="bg-white border border-brand-primary/20 rounded-2xl p-4 shadow-sm">
+                <p className="text-xs uppercase tracking-widest text-brand-gold font-bold mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-brand-gold" /> Insight
+                </p>
+                <p className="text-lg text-brand-text italic">
+                  “{insight || mission.insights?.[0]}”
+                </p>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-xs text-gray-500">
+                conclua e compartilhe seu momento • conexaoem3min.com
+              </div>
+              <div className="text-sm font-semibold text-brand-primary">#ConexãoEm3Minutos</div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="bg-brand-primary/10 p-6 pb-12 relative">
           <div className="absolute top-4 right-4">
                <span className="bg-white/80 backdrop-blur-sm text-brand-text px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
