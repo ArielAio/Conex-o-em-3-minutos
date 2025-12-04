@@ -4,7 +4,7 @@ import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
-import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription } from './services/storageService';
+import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection } from './services/storageService';
 import { getMissionByDay, MISSIONS } from './services/mockData';
 import { UserProgress, CURRENT_MONTH_THEME } from './types';
 import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock } from 'lucide-react';
@@ -135,6 +135,7 @@ const App = () => {
         isPremium: false,
         streak: 0,
         lastLoginDate: new Date().toISOString(),
+        reflections: {},
       };
       setUser(fallback);
       setCurrentDay(getCurrentDayFromStart(fallback.startDate));
@@ -159,10 +160,10 @@ const App = () => {
   }, [user]);
 
   useEffect(() => {
-    // highlight reflexão mais longa
+    // highlight reflexão mais longa usando dados persistidos
     let best: { title: string; text: string } | null = null;
     MISSIONS.forEach((mission) => {
-      const reflection = localStorage.getItem(`ce3m-reflection-${mission.id}`);
+      const reflection = getReflectionForMission(mission.id);
       if (reflection && reflection.trim().length > 0) {
         if (!best || reflection.length > best.text.length) {
           best = { title: mission.title, text: reflection.trim() };
@@ -170,7 +171,7 @@ const App = () => {
       }
     });
     setHighlightReflection(best);
-  }, [todayKey]);
+  }, [todayKey, user]);
 
   useEffect(() => {
     setTabChanging(true);
@@ -235,6 +236,21 @@ const App = () => {
 
   const handleCancelSubscription = () => {
     setShowCancelModal(true);
+  };
+
+  const handleSaveReflection = async (missionId: number, text: string) => {
+    if (!user) return;
+    const updated = await saveReflection(missionId, text);
+    setUser(updated);
+  };
+
+  const getReflectionForMission = (missionId: number) => {
+    const fromUser = user?.reflections?.[missionId];
+    if (fromUser) return fromUser;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`ce3m-reflection-${missionId}`) || '';
+    }
+    return '';
   };
 
   if (loading) {
@@ -309,6 +325,8 @@ const App = () => {
             mission={activeMission} 
             isCompleted={isCompleted} 
             onComplete={handleCompleteMission}
+            initialReflection={getReflectionForMission(activeMission.id)}
+            onSaveReflection={handleSaveReflection}
           />
         ) : (
           <div className="text-center py-10 bg-white rounded-3xl p-8 shadow-sm">
@@ -389,10 +407,10 @@ const App = () => {
 
             <div className="space-y-0">
                 {visibleMissions.map((mission, index) => {
-                const isDone = user.completedMissionIds.includes(mission.id);
-                const isLocked = !isDone && mission.day > currentDay;
-                const isFuture = mission.day > currentDay;
-                const reflection = typeof window !== 'undefined' ? (localStorage.getItem(`ce3m-reflection-${mission.id}`) || '') : '';
+                    const isDone = user.completedMissionIds.includes(mission.id);
+                    const isLocked = !isDone && mission.day > currentDay;
+                    const isFuture = mission.day > currentDay;
+                    const reflection = getReflectionForMission(mission.id);
                 
                 // Streak logic: Check if this mission and the PREVIOUS mission in the list were both done
                 const prevMission = visibleMissions[index - 1];

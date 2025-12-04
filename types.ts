@@ -17,6 +17,7 @@ export interface UserProgress {
   isPremium: boolean;
   streak: number;
   lastLoginDate: string;
+  reflections?: Record<number, string>;
 }
 
 export enum Theme {

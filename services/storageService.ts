@@ -19,7 +19,18 @@ const DEFAULT_USER: UserProgress = {
   isPremium: false,
   streak: 0,
   lastLoginDate: new Date().toISOString(),
+  reflections: {},
   partnerName: '',
+};
+
+const sanitizeReflections = (raw: any): Record<number, string> => {
+  if (!raw || typeof raw !== 'object') return {};
+  return Object.entries(raw).reduce<Record<number, string>>((acc, [k, v]) => {
+    if (typeof v === 'string' && v.trim()) {
+      acc[Number(k)] = v.trim();
+    }
+    return acc;
+  }, {});
 };
 
 // Helper to get local data synchronously
@@ -32,6 +43,7 @@ const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
     isPremium: data.isPremium || false,
     streak: data.streak || 0,
     lastLoginDate: data.lastLoginDate || new Date().toISOString(),
+    reflections: sanitizeReflections(data.reflections),
   };
 };
 
@@ -86,6 +98,10 @@ export const getUserData = async (): Promise<UserProgress> => {
         
         // Timeout to avoid infinite waits (network/rules)
         const remote = await withTimeout(fetchDoc, 2000, local);
+        const mergedReflections = {
+          ...sanitizeReflections(remote.reflections),
+          ...sanitizeReflections(local.reflections),
+        };
         const merged: UserProgress = {
           name: local.name !== 'Visitante' ? local.name : remote.name,
           partnerName: local.partnerName || remote.partnerName || '',
@@ -94,6 +110,7 @@ export const getUserData = async (): Promise<UserProgress> => {
           isPremium: local.isPremium || remote.isPremium,
           streak: Math.max(local.streak || 0, remote.streak || 0),
           lastLoginDate: local.lastLoginDate || remote.lastLoginDate || new Date().toISOString(),
+          reflections: mergedReflections,
         };
         saveLocalData(merged);
         setDoc(docRef, merged, { merge: true }).catch(() => {});
@@ -132,6 +149,22 @@ export const completeMission = async (missionId: number, current?: UserProgress)
   return user;
 };
 
+export const saveReflection = async (missionId: number, text: string, current?: UserProgress): Promise<UserProgress> => {
+  const user = ensureDefaults(current || getLocalData());
+  const clean = text.trim();
+  const nextReflections = { ...(user.reflections || {}) };
+  if (clean) {
+    nextReflections[missionId] = clean;
+  } else {
+    delete nextReflections[missionId];
+  }
+  user.reflections = nextReflections;
+  await saveUserData(user);
+  // Persist locally too for offline/guest mode
+  saveLocalData(user);
+  return user;
+};
+
 export const updateUserProfile = async (name: string, partnerName: string): Promise<UserProgress> => {
   const user = getLocalData();
   user.name = name;
@@ -164,6 +197,7 @@ export const resetProgress = async (): Promise<UserProgress> => {
         completedMissionIds: [],
         streak: 0,
         lastLoginDate: now,
+        reflections: {},
     };
     await saveUserData(resetUser);
     return resetUser;

@@ -9,6 +9,8 @@ interface DailyMissionProps {
   isCompleted: boolean;
   onComplete: () => void;
   isLocked?: boolean;
+  initialReflection?: string;
+  onSaveReflection?: (missionId: number, text: string) => void | Promise<void>;
 }
 
 const Particles = ({ count }: { count: number }) => {
@@ -54,17 +56,20 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   mission, 
   isCompleted, 
   onComplete,
-  isLocked = false
+  isLocked = false,
+  initialReflection = '',
+  onSaveReflection,
 }) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [showAction, setShowAction] = useState(isCompleted);
   const [showCompletedDetails, setShowCompletedDetails] = useState(isCompleted);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [reflection, setReflection] = useState<string>('');
+  const [reflection, setReflection] = useState<string>(initialReflection);
   const particlesCount = isCompleted ? 18 : 0;
   const shareCardRef = useRef<HTMLDivElement | null>(null);
-  const reflectionKey = useMemo(() => `ce3m-reflection-${mission.id}`, [mission.id]);
+  const reflectionStorageKey = useMemo(() => `ce3m-reflection-${mission.id}`, [mission.id]);
+  const lastSavedReflection = useRef<string>(initialReflection);
 
   const heartBursts = useMemo(() => {
     return Array.from({ length: 16 }).map((_, i) => {
@@ -87,9 +92,19 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   }, [isCompleted, mission.id]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(reflectionKey);
-    if (stored) setReflection(stored);
-  }, [reflectionKey]);
+    setReflection(initialReflection || '');
+    lastSavedReflection.current = initialReflection || '';
+  }, [initialReflection, mission.id]);
+
+  useEffect(() => {
+    if (!onSaveReflection) return;
+    if (reflection === lastSavedReflection.current) return;
+    const handler = setTimeout(() => {
+      lastSavedReflection.current = reflection;
+      onSaveReflection(mission.id, reflection);
+    }, 450);
+    return () => clearTimeout(handler);
+  }, [reflection, mission.id, onSaveReflection]);
 
   const handleComplete = async () => {
     if (isCompleted || isCompleting) return;
@@ -383,7 +398,9 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 onChange={(e) => {
                   const v = e.target.value.slice(0, 140);
                   setReflection(v);
-                  localStorage.setItem(reflectionKey, v);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(reflectionStorageKey, v);
+                  }
                 }}
                 maxLength={140}
                 placeholder="Ex.: respiramos antes de responder e a conversa ficou leve."
