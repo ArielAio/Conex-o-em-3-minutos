@@ -578,7 +578,7 @@ const App = () => {
                     <p className="text-xs text-gray-500">Teste premium por 7 dias • Sem fidelidade</p>
                   </div>
                 </div>
-                <div className="text-sm text-gray-600 font-semibold">R$ 24,90 / mês</div>
+                <div className="text-sm text-gray-600 font-semibold">R$ 9,90 / mês</div>
               </div>
               <div className="grid sm:grid-cols-2 gap-3 text-sm text-brand-text">
                 <div className="flex items-start gap-2">

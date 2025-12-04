@@ -9,7 +9,7 @@ const sellingPoints = [
   { title: 'Missão diária guiada', desc: '3 minutos por dia para quebrar a rotina automática e abrir conversa de verdade.' },
   { title: 'Envio por e-mail', desc: 'Receba a missão às 07h para criar hábito e não depender da memória.' },
   { title: 'PDF do mês', desc: 'Transforme as conquistas em um presente digital que fica para sempre.' },
-  { title: 'Assinatura leve', desc: 'R$ 24,90 para destravar o próximo mês e manter o progresso correndo.' },
+  { title: 'Assinatura leve', desc: 'R$ 9,90 para destravar o próximo mês e manter o progresso correndo.' },
 ];
 
 const steps = [
@@ -313,7 +313,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <p className="text-xs uppercase tracking-[0.2em] text-white/70 font-semibold">Plano completo</p>
             <h3 className="font-serif text-2xl leading-tight">Assine e mantenha a evolução sem pausa.</h3>
             <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold">R$ 24,90</span>
+              <span className="text-4xl font-bold">R$ 9,90</span>
               <span className="text-sm text-white/80 mb-1">/ mês</span>
             </div>
             <p className="text-white/90">Libere o próximo mês automaticamente, ganhe PDF premium, rituais exclusivos e histórico ilimitado.</p>
