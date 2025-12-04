@@ -6,6 +6,7 @@ export interface Mission {
   action: string;
   theme: string;
   quote?: string;
+  insights?: string[];
 }
 
 export interface UserProgress {

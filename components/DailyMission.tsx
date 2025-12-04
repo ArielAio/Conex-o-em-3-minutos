@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Mission } from '../types';
 import { Button } from './Button';
-import { generateInsight } from '../services/geminiService';
 import { CheckCircle, Lock, Sparkles, Share2, ChevronDown, HeartHandshake, Clock } from 'lucide-react';
 
 interface DailyMissionProps {
@@ -57,7 +56,6 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   isLocked = false
 }) => {
   const [insight, setInsight] = useState<string | null>(null);
-  const [isLoadingInsight, setIsLoadingInsight] = useState(false);
   const [showAction, setShowAction] = useState(isCompleted);
   const [isCompleting, setIsCompleting] = useState(false);
   const particlesCount = isCompleted ? 18 : 0;
@@ -84,11 +82,9 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
     setIsCompleting(true);
     try {
       await onComplete();
-      if (process.env.API_KEY && !insight) {
-          setIsLoadingInsight(true);
-          const text = await generateInsight(mission.title, mission.action);
-          setInsight(text);
-          setIsLoadingInsight(false);
+      if (!insight && mission.insights && mission.insights.length) {
+        const pick = mission.insights[Math.floor(Math.random() * mission.insights.length)];
+        setInsight(pick);
       }
     } catch (error) {
       console.error('Erro ao completar missão', error);
@@ -99,10 +95,12 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   };
 
   const handleManualInsight = async () => {
-    setIsLoadingInsight(true);
-    const text = await generateInsight(mission.title, mission.action);
-    setInsight(text);
-    setIsLoadingInsight(false);
+    if (mission.insights && mission.insights.length) {
+      const pick = mission.insights[Math.floor(Math.random() * mission.insights.length)];
+      setInsight(pick);
+    } else {
+      setInsight('Confiem no processo diário. Pequenas ações somadas constroem segurança.');
+    }
   }
 
   const handleShare = async () => {
@@ -181,18 +179,14 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
              </div>
              
              {insight ? (
-                <p className="text-brand-text leading-relaxed font-serif text-lg italic animate-fade-in">
+                <p className="text-brand-text leading-relaxed font-serif text-lg italic animate-fade-in anim-scale-pop">
                   "{insight}"
                 </p>
              ) : (
                 <div className="text-center py-2">
-                    {isLoadingInsight ? (
-                        <span className="text-sm text-gray-400 animate-pulse">Consultando o universo...</span>
-                    ) : (
-                        <Button variant="ghost" onClick={handleManualInsight} className="text-sm">
-                            <Sparkles className="w-4 h-4 mr-2" /> Revelar Insight Profundo
-                        </Button>
-                    )}
+                    <Button variant="ghost" onClick={handleManualInsight} className="text-sm">
+                        <Sparkles className="w-4 h-4 mr-2" /> Revelar Insight
+                    </Button>
                 </div>
              )}
           </div>
