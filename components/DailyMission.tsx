@@ -58,6 +58,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
 }) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [showAction, setShowAction] = useState(isCompleted);
+  const [showCompletedDetails, setShowCompletedDetails] = useState(isCompleted);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const particlesCount = isCompleted ? 18 : 0;
@@ -77,8 +78,11 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   useEffect(() => {
     if (isCompleted) {
       setShowAction(true);
+      setShowCompletedDetails(true);
+    } else {
+      setShowCompletedDetails(false);
     }
-  }, [isCompleted]);
+  }, [isCompleted, mission.id]);
 
   const handleComplete = async () => {
     if (isCompleted || isCompleting) return;
@@ -112,8 +116,20 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
     return new File([blob], filename, { type: blob.type });
   };
 
+  const buildShareText = () => {
+    const titleLine = `${isCompleted ? 'Missão concluída' : 'Missão do dia'}: "${mission.title}" (Dia ${mission.day} • ${mission.theme})`;
+    const actionLine = `Ação: ${mission.action}`;
+    const inviteLine = isCompleted 
+      ? 'Quero compartilhar esse momento com você. ❤️'
+      : 'Topa fazer comigo hoje? ❤️';
+    const insightLine = insight ? `\nInsight que tive: "${insight}"` : '';
+
+    const linkLine = 'Acesse: https://conexao-em-3-minutos.vercel.app';
+    return `${titleLine}\n${actionLine}\n${inviteLine}${insightLine}\n${linkLine}`;
+  };
+
   const handleShare = async () => {
-    const textToShare = `Acabei de completar a missão "${mission.title}" do Conexão em 3 Minutos! ❤️\n\n${insight || '"Pequenos gestos mudam tudo."'}\n\nBaixe e compartilhe sua jornada.`;
+    const textToShare = buildShareText();
     if (!shareCardRef.current) {
       try {
         await navigator.share({ title: 'Conexão em 3 Minutos', text: textToShare, url: window.location.href });
@@ -202,7 +218,26 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
           </div>
           
           <h3 className="font-serif text-2xl md:text-3xl mb-2 text-brand-text">Missão Cumprida!</h3>
-          <p className="text-gray-500 mb-8 font-light">Você fortaleceu seu laço hoje.</p>
+          <p className="text-gray-500 mb-6 font-light">Você fortaleceu seu laço hoje.</p>
+
+          <div className="bg-white/80 border border-brand-primary/20 rounded-2xl p-4 shadow-sm mb-6 text-left">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-brand-text text-sm font-semibold">
+                <Share2 className="w-4 h-4 text-brand-primary" />
+                <span>Compartilhar missão com seu amor</span>
+              </div>
+              <Button 
+                variant="primary" 
+                onClick={handleShare}
+                disabled={isSharing}
+                className="rounded-full px-5 py-2 text-sm font-semibold shadow-brand-primary/30"
+              >
+                <Share2 className="w-4 h-4" />
+                {isSharing ? 'Preparando...' : 'Enviar missão'}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Ele recebe o link da missão já com a ação do dia.</p>
+          </div>
           
           <div className="bg-gradient-to-br from-brand-bg to-white p-6 rounded-2xl border border-brand-primary/20 mb-6 text-left shadow-sm">
              <div className="flex items-center gap-2 mb-3 text-brand-accent">
@@ -223,16 +258,36 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
              )}
           </div>
           
-          <Button 
-            variant="secondary" 
-            onClick={handleShare}
-            disabled={isSharing}
-            className="mx-auto rounded-full px-6 py-2 text-sm font-medium hover:scale-105 transition-transform bg-brand-bg text-brand-primary border border-brand-primary/20"
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            {isSharing ? 'Gerando...' : 'Compartilhar Amor'}
-          </Button>
+          <div className="mt-8 text-left">
+            <button
+              onClick={() => setShowCompletedDetails((prev) => !prev)}
+              className="w-full flex items-center justify-between bg-white/70 border border-brand-primary/20 rounded-2xl px-4 py-3 text-sm font-semibold text-brand-text shadow-sm hover:border-brand-primary/40 transition"
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-brand-primary" />
+                <span>Ver missão realizada</span>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-brand-primary transition-transform ${showCompletedDetails ? 'transform rotate-180' : ''}`}
+              />
+            </button>
 
+            {showCompletedDetails && (
+              <div className="mt-4 space-y-3 bg-white/80 border border-brand-primary/20 rounded-2xl p-5 shadow-sm anim-fade-slide">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-brand-primary font-bold">
+                  <span className="px-2 py-1 bg-brand-primary/10 rounded-full">Dia {mission.day}</span>
+                  <span className="text-gray-400">•</span>
+                  <span>{mission.theme}</span>
+                </div>
+                <h4 className="font-serif text-xl text-brand-text leading-snug">{mission.title}</h4>
+                <p className="text-sm text-gray-600 leading-relaxed">{mission.shortDescription}</p>
+                <div className="bg-brand-bg p-4 rounded-xl border-l-4 border-brand-primary/40">
+                  <p className="text-xs uppercase tracking-wider text-brand-accent font-bold mb-1">Ação realizada</p>
+                  <p className="text-base text-brand-text leading-relaxed">{mission.action}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -288,6 +343,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
           <h2 className="font-serif text-3xl text-brand-text mt-2 leading-tight">
             {mission.title}
           </h2>
+
       </div>
 
       <div className="p-6 md:p-8 -mt-6 bg-white rounded-t-3xl relative z-10">
@@ -295,14 +351,33 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             {mission.shortDescription}
         </p>
 
-        <div className={`transition-all duration-500 overflow-hidden ${showAction ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="bg-brand-bg p-6 rounded-2xl border-l-4 border-brand-primary mb-8 anim-fade-slide">
+        <div className={`transition-all duration-500 overflow-hidden ${showAction ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="bg-brand-bg p-6 rounded-2xl border-l-4 border-brand-primary mb-6 anim-fade-slide">
                 <h4 className="font-bold text-brand-accent mb-2 text-xs uppercase flex items-center gap-2">
                     <HeartHandshake className="w-4 h-4" /> Sua Ação:
                 </h4>
                 <p className="text-xl text-gray-800 font-serif leading-snug">
                 {mission.action}
                 </p>
+            </div>
+
+            <div className="bg-white/95 border border-brand-primary/25 rounded-2xl shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
+              <div className="flex items-start gap-2">
+                <Share2 className="w-4 h-4 text-brand-primary mt-1" />
+                <div>
+                  <p className="text-sm font-semibold text-brand-text">Compartilhar missão com seu amor</p>
+                  <p className="text-xs text-gray-500">Enviamos o link com a ação do dia para fazerem juntos.</p>
+                </div>
+              </div>
+              <Button 
+                variant="primary" 
+                onClick={handleShare}
+                disabled={isSharing}
+                className="w-full md:w-auto rounded-full px-5 py-2 text-sm font-semibold shadow-brand-primary/30"
+              >
+                <Share2 className="w-4 h-4" />
+                {isSharing ? 'Preparando...' : 'Enviar missão'}
+              </Button>
             </div>
         </div>
 
