@@ -66,20 +66,20 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     };
 
     return (
-        <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6 animate-fade-in">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6 pb-safe pt-safe px-safe animate-fade-in">
+            <div className="w-full max-w-md app-shell">
                 <div className="flex justify-center mb-8">
                     <div className="bg-white p-4 rounded-full shadow-lg shadow-brand-primary/20">
                          <Heart className="w-10 h-10 text-brand-primary fill-brand-primary animate-pulse-slow" />
                     </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-50 text-center">
+                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-50 text-center card-padding rounded-surface card-float soft-hover transition-all duration-300">
                     
                     {step === 0 && (
                         <div className="animate-slide-up space-y-4">
-                            <h1 className="font-serif text-2xl mb-2 text-brand-text">Bem-vindo(a)</h1>
-                            <p className="text-gray-500 mb-6 text-sm">
+                            <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">Bem-vindo(a)</h1>
+                            <p className="text-gray-500 mb-6 text-sm leading-relaxed">
                                 Salve seu progresso e conecte-se de verdade. <br/>Entre para não perder suas memórias.
                             </p>
                             
@@ -149,7 +149,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
                     {step === 1 && (
                         <div className="animate-slide-up">
-                            <h1 className="font-serif text-2xl mb-2 text-brand-text">Como você se chama?</h1>
+                            <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">Como você se chama?</h1>
                             <p className="text-gray-500 mb-6">Para personalizar sua experiência.</p>
                             <input 
                                 type="text"
@@ -167,7 +167,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
                     {step === 2 && (
                         <div className="animate-slide-up">
-                             <h1 className="font-serif text-2xl mb-2 text-brand-text">E seu parceiro(a)?</h1>
+                             <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">E seu parceiro(a)?</h1>
                              <p className="text-gray-500 mb-6">Como se chama seu amor?</p>
                              <input 
                                 type="text"

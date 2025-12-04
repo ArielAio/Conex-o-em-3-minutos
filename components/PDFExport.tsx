@@ -15,7 +15,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ user, theme }) => {
     };
 
     return (
-        <div className="bg-brand-secondary/20 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4 mt-8 no-print">
+        <div className="bg-brand-secondary/20 p-6 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 no-print card-padding rounded-surface soft-hover transition-all duration-300">
             <div className="flex items-center gap-4">
                 <div className="bg-white p-3 rounded-full shadow-sm">
                     <FileText className="w-6 h-6 text-brand-primary" />

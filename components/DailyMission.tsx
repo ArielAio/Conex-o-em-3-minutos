@@ -186,7 +186,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
 
   if (isCompleted) {
     return (
-      <div className="bg-white p-6 md:p-10 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.05)] border border-brand-success/20 anim-scale-pop relative overflow-hidden transition-all duration-500">
+      <div className="bg-white p-6 md:p-10 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.05)] border border-brand-success/20 anim-scale-pop relative overflow-hidden transition-all duration-500 card-padding rounded-surface card-float soft-hover">
         <Particles count={particlesCount} />
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           {heartBursts.map((h) => (
@@ -217,11 +217,11 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             <CheckCircle className="w-10 h-10 group-hover:scale-110 transition-transform duration-300" />
           </div>
           
-          <h3 className="font-serif text-2xl md:text-3xl mb-2 text-brand-text">Missão Cumprida!</h3>
-          <p className="text-gray-500 mb-6 font-light">Você fortaleceu seu laço hoje.</p>
+          <h3 className="font-serif heading-lg mb-2 text-brand-text leading-tight">Missão Cumprida!</h3>
+          <p className="text-gray-500 mb-6 font-light text-fluid">Você fortaleceu seu laço hoje.</p>
 
-          <div className="bg-white/80 border border-brand-primary/20 rounded-2xl p-4 shadow-sm mb-6 text-left">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="bg-white/80 border border-brand-primary/20 rounded-2xl p-4 shadow-sm mb-6 text-left card-padding">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-brand-text text-sm font-semibold">
                 <Share2 className="w-4 h-4 text-brand-primary" />
                 <span>Compartilhar missão com seu amor</span>
@@ -239,7 +239,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             <p className="text-xs text-gray-500 mt-2">Ele recebe o link da missão já com a ação do dia.</p>
           </div>
           
-          <div className="bg-gradient-to-br from-brand-bg to-white p-6 rounded-2xl border border-brand-primary/20 mb-6 text-left shadow-sm">
+          <div className="bg-gradient-to-br from-brand-bg to-white p-6 rounded-2xl border border-brand-primary/20 mb-6 text-left shadow-sm card-padding">
              <div className="flex items-center gap-2 mb-3 text-brand-accent">
                <Sparkles className="w-4 h-4 text-brand-gold" />
                <span className="text-xs font-bold uppercase tracking-wider text-brand-gold">Insight do Dia</span>
@@ -294,7 +294,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-brand-primary/10 overflow-hidden transition-all duration-300">
+    <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-brand-primary/10 overflow-hidden transition-all duration-300 card-float rounded-surface soft-hover">
       {/* Card oculto para gerar imagem de compartilhamento */}
       <div className="hidden">
         <div 
@@ -333,35 +333,35 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
           </div>
         </div>
       </div>
-      <div className="bg-brand-primary/10 p-6 pb-12 relative">
+      <div className="bg-brand-primary/10 p-5 sm:p-6 pb-12 relative">
           <div className="absolute top-4 right-4">
                <span className="bg-white/80 backdrop-blur-sm text-brand-text px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
                  <Clock className="w-3 h-3" /> 3 min
                </span>
           </div>
           <span className="text-brand-primary font-bold text-xs uppercase tracking-widest">Dia {mission.day}</span>
-          <h2 className="font-serif text-3xl text-brand-text mt-2 leading-tight">
+          <h2 className="font-serif heading-lg text-brand-text mt-2 leading-tight">
             {mission.title}
           </h2>
 
       </div>
 
-      <div className="p-6 md:p-8 -mt-6 bg-white rounded-t-3xl relative z-10">
-        <p className="text-lg text-gray-600 mb-8 leading-relaxed font-light">
+      <div className="p-6 md:p-8 -mt-6 bg-white rounded-t-3xl relative z-10 card-padding">
+        <p className="text-fluid text-gray-600 mb-8 leading-relaxed font-light">
             {mission.shortDescription}
         </p>
 
         <div className={`transition-all duration-500 overflow-hidden ${showAction ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="bg-brand-bg p-6 rounded-2xl border-l-4 border-brand-primary mb-6 anim-fade-slide">
+            <div className="bg-brand-bg p-6 rounded-2xl border-l-4 border-brand-primary mb-6 anim-fade-slide card-padding">
                 <h4 className="font-bold text-brand-accent mb-2 text-xs uppercase flex items-center gap-2">
                     <HeartHandshake className="w-4 h-4" /> Sua Ação:
                 </h4>
-                <p className="text-xl text-gray-800 font-serif leading-snug">
+                <p className="text-[clamp(1.05rem,2.6vw,1.3rem)] text-gray-800 font-serif leading-snug">
                 {mission.action}
                 </p>
             </div>
 
-            <div className="bg-white/95 border border-brand-primary/25 rounded-2xl shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
+            <div className="bg-white/95 border border-brand-primary/25 rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8 card-padding">
               <div className="flex items-start gap-2">
                 <Share2 className="w-4 h-4 text-brand-primary mt-1" />
                 <div>

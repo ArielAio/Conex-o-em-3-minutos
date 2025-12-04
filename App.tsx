@@ -43,6 +43,7 @@ const App = () => {
   // Pagination state for history to prevent heavy rendering
   const [historyPage, setHistoryPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+  const [tabChanging, setTabChanging] = useState(false);
 
   // Helper to load data
   const loadUserData = async () => {
@@ -85,6 +86,12 @@ const App = () => {
       setEditPartnerName(user.partnerName || '');
     }
   }, [user]);
+
+  useEffect(() => {
+    setTabChanging(true);
+    const t = setTimeout(() => setTabChanging(false), 360);
+    return () => clearTimeout(t);
+  }, [activeTab]);
 
   const handleOnboardingComplete = async (name: string, partnerName: string) => {
       const updated = await updateUserProfile(name, partnerName);
@@ -156,10 +163,10 @@ const App = () => {
   const isCompleted = activeMission ? user.completedMissionIds.includes(activeMission.id) : false;
 
   const renderMissionView = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 md:space-y-8">
         <header className="mb-4">
-            <h1 className="font-serif text-3xl text-brand-text">Bom dia, {user.name.split(' ')[0]}</h1>
-            <p className="text-gray-500 text-sm">{formatToday()}</p>
+            <h1 className="font-serif heading-lg text-brand-text leading-tight">Bom dia, {user.name.split(' ')[0]}</h1>
+            <p className="text-gray-500 text-xs sm:text-sm">{formatToday()}</p>
         </header>
 
         {activeMission ? (
@@ -175,8 +182,8 @@ const App = () => {
           </div>
         )}
 
-        <div className="bg-white px-6 py-4 rounded-2xl border border-gray-100 flex items-center justify-between">
-           <div>
+          <div className="bg-white px-6 py-4 rounded-2xl border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all duration-300 soft-hover card-float">
+           <div className="w-full">
               <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">Progresso</span>
               <div className="flex gap-1 mt-1">
                  {Array.from({length: 5}).map((_, i) => (
@@ -184,16 +191,16 @@ const App = () => {
                  ))}
               </div>
            </div>
-           <span className="text-brand-primary font-serif font-bold text-xl">{Math.round((user.completedMissionIds.length / 30) * 100)}%</span>
+           <span className="text-brand-primary font-serif font-bold text-lg sm:text-xl">{Math.round((user.completedMissionIds.length / 30) * 100)}%</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm card-padding transition-all duration-300 soft-hover">
             <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Tema do mês</p>
-            <p className="font-serif text-lg text-brand-text">{CURRENT_MONTH_THEME}</p>
+            <p className="font-serif text-base sm:text-lg text-brand-text">{CURRENT_MONTH_THEME}</p>
             <p className="text-xs text-gray-500 mt-1">30 dias • conteúdo liberado diariamente</p>
           </div>
-          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm card-padding transition-all duration-300 soft-hover">
             <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Resumo rápido</p>
             <p className="text-sm text-brand-text">Streak: <span className="font-semibold">{user.streak}</span> dia(s)</p>
             <p className="text-sm text-gray-500">Missões concluídas: <span className="font-semibold text-brand-primary">{user.completedMissionIds.length}</span></p>
@@ -208,9 +215,9 @@ const App = () => {
     const hasMore = visibleMissions.length < MISSIONS.length;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 md:space-y-8">
             <header>
-                <h2 className="font-serif text-2xl text-brand-text mb-1">Sua Jornada</h2>
+                <h2 className="font-serif heading-md text-brand-text mb-1 leading-tight">Sua Jornada</h2>
                 <p className="text-xs text-brand-primary uppercase tracking-widest font-bold">{CURRENT_MONTH_THEME}</p>
             </header>
 
@@ -228,7 +235,7 @@ const App = () => {
                     return (
                         <div 
                           key={mission.id} 
-                          className="relative anim-fade-slide-fast" 
+                          className="relative anim-fade-slide-fast transition-all duration-300 hover:-translate-y-0.5" 
                           style={{ animationDelay: `${index * 35}ms` }}
                         >
                             {/* Streak Connector Line */}
@@ -252,7 +259,7 @@ const App = () => {
                                 </div>
                                 
                                 <div className="flex items-center gap-2">
-                                    <h4 className={`font-serif text-lg ${isDone ? 'text-brand-text' : 'text-gray-400'}`}>
+                                    <h4 className={`font-serif text-base sm:text-lg leading-snug ${isDone ? 'text-brand-text' : 'text-gray-400'}`}>
                                         {isFuture && !isDone ? "???" : mission.title}
                                     </h4>
                                     {isStreak && (
@@ -285,8 +292,8 @@ const App = () => {
   };
 
   const renderProfileView = () => (
-      <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 text-center relative">
+      <div className="space-y-6 md:space-y-8">
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 text-center relative rounded-surface card-padding card-float soft-hover transition-all duration-300">
               <div className="w-20 h-20 bg-brand-secondary/30 rounded-full mx-auto mb-4 flex items-center justify-center text-brand-primary overflow-hidden">
                   {auth.currentUser?.photoURL ? (
                       <img src={auth.currentUser.photoURL} alt={user.name} className="w-full h-full object-cover" />
@@ -294,11 +301,11 @@ const App = () => {
                       <UserIcon className="w-10 h-10" />
                   )}
               </div>
-              <h2 className="font-serif text-2xl text-brand-text">{user.name}</h2>
+              <h2 className="font-serif heading-md text-brand-text">{user.name}</h2>
               <p className="text-gray-400 text-sm mb-4">&</p>
-              <h2 className="font-serif text-2xl text-brand-text mb-6">{user.partnerName}</h2>
+              <h2 className="font-serif heading-md text-brand-text mb-6">{user.partnerName}</h2>
               
-              <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 border-t border-gray-100 pt-6">
                   <div>
                       <span className="block text-2xl font-bold text-brand-primary">{user.streak}</span>
                       <span className="text-xs text-gray-400 uppercase">Dias Seguidos</span>
@@ -317,7 +324,7 @@ const App = () => {
           </div>
 
           {auth.currentUser && (
-            <div className="p-4 rounded-xl border border-gray-100 bg-white">
+            <div className="p-4 rounded-xl border border-gray-100 bg-white card-padding soft-hover transition-all duration-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-brand-text">Você está conectado</p>
@@ -335,7 +342,7 @@ const App = () => {
           )}
           
           {!auth.currentUser && (
-            <div className="p-4 rounded-xl border border-gray-100 bg-white">
+            <div className="p-4 rounded-xl border border-gray-100 bg-white card-padding soft-hover transition-all duration-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-brand-text">Entrar para sincronizar</p>
@@ -352,7 +359,7 @@ const App = () => {
             </div>
           )}
 
-          <div className="bg-brand-primary/5 p-4 rounded-xl flex items-center gap-4">
+          <div className="bg-brand-primary/5 p-4 rounded-xl flex items-center gap-4 transition-all duration-300 soft-hover">
                <div className="bg-white p-2 rounded-full shadow-sm">
                    <Star className={`w-5 h-5 ${user.isPremium ? 'text-brand-gold fill-brand-gold' : 'text-gray-300'}`} />
                </div>
@@ -367,13 +374,13 @@ const App = () => {
                )}
           </div>
           
-          <div className="p-4 rounded-xl border border-gray-100 bg-white">
+          <div className="p-4 rounded-xl border border-gray-100 bg-white soft-hover transition-all duration-300">
                <button className="flex items-center gap-3 w-full text-gray-600 text-sm py-2">
                    <Settings className="w-4 h-4" /> Configurações de Notificação
                </button>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3 card-padding soft-hover transition-all duration-300">
               <h3 className="font-semibold text-sm text-brand-text">Editar informações</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input 
@@ -407,7 +414,7 @@ const App = () => {
             </div>
           )}
 
-          <div className="bg-white p-5 rounded-2xl border border-red-100 shadow-sm space-y-3">
+          <div className="bg-white p-5 rounded-2xl border border-red-100 shadow-sm space-y-3 card-padding soft-hover transition-all duration-300">
               <div className="flex items-start gap-3">
                   <div className="bg-red-50 text-red-500 p-2 rounded-lg">
                       <RotateCcw className="w-4 h-4" />
@@ -431,14 +438,21 @@ const App = () => {
 
   return (
     <div>
+      {tabChanging && (
+        <div className="fixed inset-0 z-30 pointer-events-none">
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] tab-wash" />
+        </div>
+      )}
       <Layout 
         userStreak={user.streak} 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
       >
-        {activeTab === 'mission' && renderMissionView()}
-        {activeTab === 'history' && renderHistoryView()}
-        {activeTab === 'profile' && renderProfileView()}
+        <div key={activeTab} className="view-animate space-y-6">
+          {activeTab === 'mission' && renderMissionView()}
+          {activeTab === 'history' && renderHistoryView()}
+          {activeTab === 'profile' && renderProfileView()}
+        </div>
       </Layout>
 
       {showResetModal && (

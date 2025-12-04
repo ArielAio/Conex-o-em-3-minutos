@@ -8,7 +8,7 @@ interface SubscriptionGateProps {
 
 export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({ onSubscribe }) => {
   return (
-    <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 p-8 rounded-2xl border border-brand-primary/20 text-center my-8 no-print">
+    <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 p-8 rounded-2xl border border-brand-primary/20 text-center my-8 no-print card-padding rounded-surface soft-hover transition-all duration-300">
       <div className="bg-white/80 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
         <Star className="w-6 h-6 text-brand-gold fill-brand-gold" />
       </div>
