@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Conexão em 3 Minutos</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23D8B4E2'/%3E%3Cpath d='M32 48s-14-8.4-14-19a9 9 0 0 1 16-5.4A9 9 0 0 1 46 29c0 10.6-14 19-14 19Z' fill='%23fff'/%3E%3C/svg%3E" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <script>
@@ -52,7 +53,23 @@
               confetti: {
                 '0%': { transform: 'translateY(-10%) rotate(0deg)', opacity: '1' },
                 '100%': { transform: 'translateY(300px) rotate(720deg)', opacity: '0' }
-              }
+              },
+              fadeSlide: {
+                '0%': { opacity: '0', transform: 'translateY(12px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' }
+              },
+              scalePop: {
+                '0%': { opacity: '0', transform: 'scale(0.92)' },
+                '100%': { opacity: '1', transform: 'scale(1)' }
+              },
+              pulseSoft: {
+                '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+                '50%': { transform: 'scale(1.02)', opacity: '0.9' }
+              },
+              glowSoft: {
+                '0%, 100%': { boxShadow: '0 0 0px rgba(200, 150, 210, 0.0)' },
+                '50%': { boxShadow: '0 0 30px rgba(200, 150, 210, 0.35)' }
+              },
             }
           }
         }
@@ -63,6 +80,48 @@
         background-color: #FDFCF8;
         color: #4A4A4A;
         -webkit-tap-highlight-color: transparent;
+      }
+      :root {
+        --motion-duration-short: 200ms;
+        --motion-duration-base: 320ms;
+        --motion-duration-long: 520ms;
+        --motion-ease: cubic-bezier(0.33, 1, 0.68, 1);
+      }
+      .motion-light * {
+        transition-duration: 120ms !important;
+        animation-duration: 0ms !important;
+      }
+      .motion-light .anim-confetti {
+        display: none !important;
+      }
+      .anim-fade-slide {
+        animation: fadeSlide var(--motion-duration-base) var(--motion-ease) both;
+      }
+      .anim-fade-slide-fast {
+        animation: fadeSlide var(--motion-duration-short) var(--motion-ease) both;
+      }
+      .anim-scale-pop {
+        animation: scalePop var(--motion-duration-base) var(--motion-ease) both;
+      }
+      .anim-pulse-soft {
+        animation: pulseSoft 3s ease-in-out infinite;
+      }
+      .anim-glow {
+        animation: glowSoft 2.4s ease-in-out infinite;
+      }
+      .anim-slide-up {
+        animation: slideUp var(--motion-duration-base) var(--motion-ease) both;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .anim-fade-slide,
+        .anim-fade-slide-fast,
+        .anim-scale-pop,
+        .anim-pulse-soft,
+        .anim-glow,
+        .anim-slide-up {
+          animation-duration: 0ms !important;
+          animation-iteration-count: 1 !important;
+        }
       }
       /* Hide elements during printing */
       @media print {
@@ -102,8 +161,9 @@
   }
 }
 </script>
-</head>
+  </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

@@ -3,6 +3,14 @@ import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const STORAGE_KEY = 'conexao_3min_user_v1';
+let FIRESTORE_AVAILABLE = true;
+
+const disableFirestore = (reason: any) => {
+  if (FIRESTORE_AVAILABLE) {
+    console.warn('Firestore indisponível, usando apenas armazenamento local.', reason);
+  }
+  FIRESTORE_AVAILABLE = false;
+};
 
 const DEFAULT_USER: UserProgress = {
   name: 'Visitante',
@@ -11,14 +19,27 @@ const DEFAULT_USER: UserProgress = {
   isPremium: false,
   streak: 0,
   lastLoginDate: new Date().toISOString(),
+  partnerName: '',
 };
 
 // Helper to get local data synchronously
+const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
+  return {
+    name: data.name || 'Visitante',
+    partnerName: data.partnerName || '',
+    startDate: data.startDate || new Date().toISOString(),
+    completedMissionIds: Array.isArray(data.completedMissionIds) ? data.completedMissionIds : [],
+    isPremium: data.isPremium || false,
+    streak: data.streak || 0,
+    lastLoginDate: data.lastLoginDate || new Date().toISOString(),
+  };
+};
+
 const getLocalData = (): UserProgress => {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return DEFAULT_USER;
-    return JSON.parse(data);
+    return ensureDefaults(JSON.parse(data));
   } catch (error) {
     console.error("Error loading user data", error);
     return DEFAULT_USER;
@@ -26,47 +47,61 @@ const getLocalData = (): UserProgress => {
 };
 
 const saveLocalData = (data: UserProgress) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ensureDefaults(data)));
 }
 
-// Main Async Get User Function
+const withTimeout = async <T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
+  let timeoutId: any;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timeoutId = setTimeout(() => resolve(fallback), ms);
+  });
+  const result = await Promise.race([promise, timeoutPromise]);
+  clearTimeout(timeoutId);
+  return result;
+};
+
+// Main Async Get User Function (favor local; remote best-effort with timeout)
 export const getUserData = async (): Promise<UserProgress> => {
     const user = auth.currentUser;
+    const local = getLocalData();
     
-    // If logged in, try Firestore
-    if (user) {
-        try {
-            const docRef = doc(db, "users", user.uid);
-            const docSnap = await getDoc(docRef);
-            
+    if (!user || !FIRESTORE_AVAILABLE) {
+      return local;
+    }
+    
+    try {
+        const docRef = doc(db, "users", user.uid);
+        const fetchDoc = getDoc(docRef).then((docSnap) => {
             if (docSnap.exists()) {
-                const data = docSnap.data() as UserProgress;
-                // Update local storage as cache/backup
-                saveLocalData(data);
-                return data;
+                return ensureDefaults(docSnap.data() as Partial<UserProgress>);
             } else {
-                // User logged in but no data in DB yet.
-                // Check if we have local data to migrate
-                const local = getLocalData();
-                
-                // Use local name if set, otherwise use Google name
                 const initialData: UserProgress = {
                     ...local,
                     name: local.name !== 'Visitante' ? local.name : (user.displayName || 'Usuário'),
                 };
                 
-                // Save to Firestore
-                await setDoc(docRef, initialData);
-                return initialData;
+                return setDoc(docRef, initialData).then(() => initialData);
             }
-        } catch (e) {
-            console.error("Error fetching from Firestore, falling back to local", e);
-            return getLocalData();
-        }
+        });
+        
+        // Timeout to avoid infinite waits (network/rules)
+        const remote = await withTimeout(fetchDoc, 2000, local);
+        const merged: UserProgress = {
+          name: local.name !== 'Visitante' ? local.name : remote.name,
+          partnerName: local.partnerName || remote.partnerName || '',
+          startDate: local.startDate || remote.startDate,
+          completedMissionIds: Array.from(new Set([...(remote.completedMissionIds || []), ...(local.completedMissionIds || [])])),
+          isPremium: local.isPremium || remote.isPremium,
+          streak: Math.max(local.streak || 0, remote.streak || 0),
+          lastLoginDate: local.lastLoginDate || remote.lastLoginDate || new Date().toISOString(),
+        };
+        saveLocalData(merged);
+        setDoc(docRef, merged, { merge: true }).catch(() => {});
+        return merged;
+    } catch (e) {
+        disableFirestore(e);
+        return local;
     }
-
-    // If not logged in, use LocalStorage
-    return getLocalData();
 };
 
 export const saveUserData = async (data: UserProgress) => {
@@ -74,20 +109,17 @@ export const saveUserData = async (data: UserProgress) => {
   saveLocalData(data);
 
   const user = auth.currentUser;
-  if (user) {
+  if (user && FIRESTORE_AVAILABLE) {
       try {
         await setDoc(doc(db, "users", user.uid), data, { merge: true });
       } catch (e) {
-        console.error("Error syncing to Firestore", e);
+        disableFirestore(e);
       }
   }
 };
 
-export const completeMission = async (missionId: number): Promise<UserProgress> => {
-  // We first get the latest state (could be local)
-  // Note: For a robust app we might re-fetch, but for MVP we assume UI state is close to truth.
-  // We'll reload from local cache to be safe.
-  const user = getLocalData(); // We modify the local version first for speed
+export const completeMission = async (missionId: number, current?: UserProgress): Promise<UserProgress> => {
+  const user = ensureDefaults(current || getLocalData());
   
   if (!user.completedMissionIds.includes(missionId)) {
     const now = new Date();
@@ -104,6 +136,7 @@ export const updateUserProfile = async (name: string, partnerName: string): Prom
   const user = getLocalData();
   user.name = name;
   user.partnerName = partnerName;
+  user.startDate = user.startDate || new Date().toISOString();
   await saveUserData(user);
   return user;
 };
@@ -114,3 +147,17 @@ export const upgradeUser = async (): Promise<UserProgress> => {
     await saveUserData(user);
     return user;
 }
+
+export const resetProgress = async (): Promise<UserProgress> => {
+    const local = getLocalData();
+    const now = new Date().toISOString();
+    const resetUser: UserProgress = {
+        ...local,
+        startDate: now,
+        completedMissionIds: [],
+        streak: 0,
+        lastLoginDate: now,
+    };
+    await saveUserData(resetUser);
+    return resetUser;
+};

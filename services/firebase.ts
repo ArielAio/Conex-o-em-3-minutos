@@ -3,13 +3,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD2PWMJYdiTTaJ1v9lbSpV6FJ_7FaPuje8",
-  authDomain: "conexao-em-3-minutos.firebaseapp.com",
-  projectId: "conexao-em-3-minutos",
-  storageBucket: "conexao-em-3-minutos.firebasestorage.app",
-  messagingSenderId: "614044599616",
-  appId: "1:614044599616:web:440f13d1c6e509b223a6a5",
-  measurementId: "G-XNKY1Q844Z"
+  apiKey: "AIzaSyBMMR5ju9HCkf0HLI_7Hwf72Q2fG_Sp6ZM",
+  authDomain: "conexao-em-3-minutos-1dd4d.firebaseapp.com",
+  projectId: "conexao-em-3-minutos-1dd4d",
+  storageBucket: "conexao-em-3-minutos-1dd4d.firebasestorage.app",
+  messagingSenderId: "291942122284",
+  appId: "1:291942122284:web:2fd147152f1badae252289",
+  measurementId: "G-PXLK5EF6FF"
 };
 
 // Initialize Firebase

@@ -4,18 +4,43 @@ import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
-import { getUserData, completeMission, updateUserProfile, upgradeUser } from './services/storageService';
+import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress } from './services/storageService';
 import { getMissionByDay, MISSIONS } from './services/mockData';
 import { UserProgress, CURRENT_MONTH_THEME } from './types';
-import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown } from 'lucide-react';
-import { auth, logoutUser } from './services/firebase';
+import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle } from 'lucide-react';
+import { auth, logoutUser, loginWithGoogle } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Button } from './components/Button';
+import { useMotionMode } from './hooks/useMotionMode';
+
+const getCurrentDayFromStart = (startDateStr?: string) => {
+  const today = new Date();
+  const start = startDateStr ? new Date(startDateStr) : new Date();
+  const isValid = !isNaN(start.getTime());
+  const startDate = isValid ? start : new Date();
+
+  const startMid = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const diffDays = Math.max(0, Math.floor((todayMid - startMid) / 86400000));
+  return Math.min(MISSIONS.length, diffDays + 1);
+};
+
+const formatToday = () => {
+  const today = new Date();
+  return today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+};
 
 const App = () => {
   const [user, setUser] = useState<UserProgress | null>(null);
   const [currentDay, setCurrentDay] = useState(1);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'mission' | 'history' | 'profile'>('mission');
+  const { motionMode, toggleMotionMode } = useMotionMode();
+  const [editName, setEditName] = useState('');
+  const [editPartnerName, setEditPartnerName] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
   
   // Pagination state for history to prevent heavy rendering
   const [historyPage, setHistoryPage] = useState(1);
@@ -24,16 +49,28 @@ const App = () => {
   // Helper to load data
   const loadUserData = async () => {
     setLoading(true);
-    const data = await getUserData();
-    setUser(data);
-    
-    const lastCompleted = data.completedMissionIds.length > 0 
-      ? Math.max(...data.completedMissionIds) 
-      : 0;
-    
-    // Logic to set current day: if all done, show last done or next available
-    setCurrentDay(Math.min(lastCompleted + 1, 35)); // Extended to 35 for demo purposes
-    setLoading(false);
+    try {
+      const data = await getUserData();
+      setUser(data);
+
+      const dayByCalendar = getCurrentDayFromStart(data.startDate);
+      setCurrentDay(dayByCalendar);
+    } catch (error) {
+      console.error("Erro carregando dados do usuário, usando visitante", error);
+      const fallback: UserProgress = {
+        name: 'Visitante',
+        partnerName: '',
+        startDate: new Date().toISOString(),
+        completedMissionIds: [],
+        isPremium: false,
+        streak: 0,
+        lastLoginDate: new Date().toISOString(),
+      };
+      setUser(fallback);
+      setCurrentDay(getCurrentDayFromStart(fallback.startDate));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -44,6 +81,13 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      setEditName(user.name || '');
+      setEditPartnerName(user.partnerName || '');
+    }
+  }, [user]);
+
   const handleOnboardingComplete = async (name: string, partnerName: string) => {
       const updated = await updateUserProfile(name, partnerName);
       setUser(updated);
@@ -53,7 +97,7 @@ const App = () => {
     if (!user) return;
     const activeMission = getMissionByDay(currentDay);
     if (activeMission) {
-      const updatedUser = await completeMission(activeMission.id);
+      const updatedUser = await completeMission(activeMission.id, user);
       setUser(updatedUser);
     }
   };
@@ -67,9 +111,37 @@ const App = () => {
   const handleLogout = async () => {
       await logoutUser();
   }
+  const handleLogin = async () => {
+      try {
+        await loginWithGoogle();
+      } catch (error: any) {
+        console.error("Erro ao conectar com Google", error);
+        alert("Não foi possível conectar. Tente novamente.");
+      }
+  };
+  const handleSaveProfile = async () => {
+      if (!editName.trim() || !editPartnerName.trim()) {
+        alert("Preencha nome e nome do parceiro.");
+        return;
+      }
+      const updated = await updateUserProfile(editName.trim(), editPartnerName.trim());
+      setUser(updated);
+  };
+  const handleResetProgress = async () => {
+      if (!user) return;
+      const confirmed = resetConfirm.trim().toUpperCase() === 'RESET';
+      if (!confirmed) return;
+      const updated = await resetProgress();
+      setUser(updated);
+      setCurrentDay(1);
+      setShowResetModal(false);
+      setResetConfirm('');
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 2500);
+  };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-brand-bg text-brand-primary animate-pulse">
+    return <div className={`min-h-screen flex items-center justify-center bg-brand-bg text-brand-primary ${motionMode === 'full' ? 'anim-pulse-soft' : ''}`}>
         <HeartPulse />
     </div>;
   }
@@ -89,7 +161,7 @@ const App = () => {
     <div className="space-y-6">
         <header className="mb-4">
             <h1 className="font-serif text-3xl text-brand-text">Bom dia, {user.name.split(' ')[0]}</h1>
-            <p className="text-gray-500 text-sm">Sua jornada de conexão continua.</p>
+            <p className="text-gray-500 text-sm">{formatToday()}</p>
         </header>
 
         {activeMission ? (
@@ -97,6 +169,7 @@ const App = () => {
             mission={activeMission} 
             isCompleted={isCompleted} 
             onComplete={handleCompleteMission}
+            motionMode={motionMode}
           />
         ) : (
           <div className="text-center py-10 bg-white rounded-3xl p-8 shadow-sm">
@@ -115,6 +188,19 @@ const App = () => {
               </div>
            </div>
            <span className="text-brand-primary font-serif font-bold text-xl">{Math.round((user.completedMissionIds.length / 30) * 100)}%</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Tema do mês</p>
+            <p className="font-serif text-lg text-brand-text">{CURRENT_MONTH_THEME}</p>
+            <p className="text-xs text-gray-500 mt-1">30 dias • conteúdo liberado diariamente</p>
+          </div>
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Resumo rápido</p>
+            <p className="text-sm text-brand-text">Streak: <span className="font-semibold">{user.streak}</span> dia(s)</p>
+            <p className="text-sm text-gray-500">Missões concluídas: <span className="font-semibold text-brand-primary">{user.completedMissionIds.length}</span></p>
+          </div>
         </div>
     </div>
   );
@@ -143,7 +229,11 @@ const App = () => {
                     const isStreak = isDone && isPrevDone;
 
                     return (
-                        <div key={mission.id} className="relative">
+                        <div 
+                          key={mission.id} 
+                          className={`relative ${motionMode === 'full' ? 'anim-fade-slide-fast' : ''}`} 
+                          style={motionMode === 'full' ? { animationDelay: `${index * 35}ms` } : undefined}
+                        >
                             {/* Streak Connector Line */}
                             {isStreak && (
                                 <div className="absolute left-6 -top-4 bottom-1/2 w-0.5 bg-gradient-to-b from-brand-gold/50 to-brand-gold z-0" />
@@ -229,6 +319,58 @@ const App = () => {
               )}
           </div>
 
+          <div className="p-4 rounded-xl border border-gray-100 bg-white flex items-center gap-3">
+               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${motionMode === 'full' ? 'bg-brand-primary/10 anim-glow' : 'bg-gray-50'}`}>
+                   <Flame className="w-5 h-5 text-brand-primary" />
+               </div>
+               <div className="flex-1 text-left">
+                   <h4 className="font-semibold text-sm text-brand-text">Animações</h4>
+                   <p className="text-xs text-gray-500">Modo {motionMode === 'full' ? 'Completo' : 'Leve'} • seguro para baterias fracas</p>
+               </div>
+               <button 
+                 onClick={toggleMotionMode} 
+                 className="text-xs bg-brand-text text-white px-3 py-1 rounded-full transition-all hover:opacity-90"
+               >
+                 {motionMode === 'full' ? 'Usar leve' : 'Ativar completo'}
+               </button>
+          </div>
+
+          {auth.currentUser && (
+            <div className="p-4 rounded-xl border border-gray-100 bg-white">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-brand-text">Você está conectado</p>
+                  <p className="text-xs text-gray-500 truncate">{auth.currentUser.email || auth.currentUser.displayName}</p>
+                </div>
+                <Button 
+                  onClick={handleLogout} 
+                  variant="outline" 
+                  className="text-sm px-4 py-2 border-red-200 text-red-500 hover:bg-red-50"
+                >
+                  <LogOut className="w-4 h-4" /> Sair
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {!auth.currentUser && (
+            <div className="p-4 rounded-xl border border-gray-100 bg-white">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-brand-text">Entrar para sincronizar</p>
+                  <p className="text-xs text-gray-500">Guarde seu progresso em qualquer dispositivo</p>
+                </div>
+                <Button 
+                  onClick={handleLogin} 
+                  variant="outline" 
+                  className="text-sm px-4 py-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10"
+                >
+                  Entrar com Google
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-brand-primary/5 p-4 rounded-xl flex items-center gap-4">
                <div className="bg-white p-2 rounded-full shadow-sm">
                    <Star className={`w-5 h-5 ${user.isPremium ? 'text-brand-gold fill-brand-gold' : 'text-gray-300'}`} />
@@ -249,15 +391,119 @@ const App = () => {
                    <Settings className="w-4 h-4" /> Configurações de Notificação
                </button>
           </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+              <h3 className="font-semibold text-sm text-brand-text">Editar informações</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input 
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Seu nome"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  />
+                  <input 
+                    value={editPartnerName}
+                    onChange={(e) => setEditPartnerName(e.target.value)}
+                    placeholder="Nome do parceiro(a)"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  />
+              </div>
+              <div className="flex justify-end">
+                  <Button 
+                    onClick={handleSaveProfile} 
+                    variant="primary" 
+                    className="px-4 py-2 text-sm"
+                    disabled={!editName.trim() || !editPartnerName.trim()}
+                  >
+                    Salvar
+                  </Button>
+              </div>
+          </div>
+
+          {resetSuccess && (
+            <div className="bg-green-50 border border-green-100 text-green-700 rounded-xl p-3 text-sm">
+              Progresso resetado com sucesso. Você voltou para o dia 1.
+            </div>
+          )}
+
+          <div className="bg-white p-5 rounded-2xl border border-red-100 shadow-sm space-y-3">
+              <div className="flex items-start gap-3">
+                  <div className="bg-red-50 text-red-500 p-2 rounded-lg">
+                      <RotateCcw className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                      <h3 className="font-semibold text-sm text-red-600">Resetar jornada</h3>
+                      <p className="text-xs text-gray-500">Zera missões concluídas, streak e reinicia no dia 1. Ação irreversível.</p>
+                  </div>
+                  <AlertTriangle className="w-4 h-4 text-red-400" />
+              </div>
+              <Button 
+                onClick={() => setShowResetModal(true)}
+                variant="outline"
+                className="w-full border-red-300 text-red-600 hover:bg-red-50"
+              >
+                Resetar progresso
+              </Button>
+          </div>
       </div>
   );
 
   return (
-    <Layout userStreak={user.streak} activeTab={activeTab} onTabChange={setActiveTab}>
-      {activeTab === 'mission' && renderMissionView()}
-      {activeTab === 'history' && renderHistoryView()}
-      {activeTab === 'profile' && renderProfileView()}
-    </Layout>
+    <div className={`motion-${motionMode}`}>
+      <Layout 
+        userStreak={user.streak} 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        motionMode={motionMode}
+      >
+        {activeTab === 'mission' && renderMissionView()}
+        {activeTab === 'history' && renderHistoryView()}
+        {activeTab === 'profile' && renderProfileView()}
+      </Layout>
+
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-red-100">
+            <div className="flex items-start gap-3">
+              <div className="bg-red-50 text-red-500 p-2 rounded-lg">
+                <RotateCcw className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-600">Tem certeza que quer resetar?</h3>
+                <p className="text-sm text-gray-600">Isso vai zerar missões concluídas, streak e reiniciar no dia 1. Esta ação é irreversível.</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500">Digite "RESET" para confirmar</label>
+              <input
+                value={resetConfirm}
+                onChange={(e) => setResetConfirm(e.target.value)}
+                placeholder='RESET'
+                className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              />
+              {resetConfirm && resetConfirm.trim().toUpperCase() !== 'RESET' && (
+                <p className="text-xs text-red-500">Use letras maiúsculas: RESET</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button variant="ghost" onClick={() => { setShowResetModal(false); setResetConfirm(''); }}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleResetProgress}
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
+                disabled={resetConfirm.trim().toUpperCase() !== 'RESET'}
+              >
+                Resetar agora
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

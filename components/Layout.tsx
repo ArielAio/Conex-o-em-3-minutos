@@ -6,9 +6,10 @@ interface LayoutProps {
   userStreak: number;
   activeTab: 'mission' | 'history' | 'profile';
   onTabChange: (tab: 'mission' | 'history' | 'profile') => void;
+  motionMode: 'light' | 'full';
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab, onTabChange }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab, onTabChange, motionMode }) => {
   
   const NavItem = ({ icon: Icon, id, label }: { icon: any, id: 'mission' | 'history' | 'profile', label: string }) => {
     const isActive = activeTab === id;
@@ -19,7 +20,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
           isActive ? 'text-brand-primary transform -translate-y-1' : 'text-gray-400'
         }`}
       >
-        <div className={`p-1 rounded-full transition-all duration-300 ${isActive ? 'bg-brand-bg' : ''}`}>
+        <div className={`p-1 rounded-full transition-all duration-300 ${isActive ? 'bg-brand-bg' : ''} ${motionMode === 'full' && isActive ? 'anim-glow' : ''}`}>
           <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''}`} strokeWidth={isActive ? 2.5 : 2} />
         </div>
         <span className={`text-[10px] mt-1 font-medium tracking-wide ${isActive ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
@@ -51,7 +52,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
       <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md z-40 px-4 py-3 border-b border-gray-100 md:hidden flex justify-between items-center transition-all duration-300">
         <div className="flex items-center gap-2">
            <Heart className="w-5 h-5 text-brand-primary fill-brand-primary animate-pulse-slow" />
-           <span className="font-serif font-bold text-lg text-brand-text">Conexão</span>
+          <span className="font-serif font-bold text-lg text-brand-text">Conexão</span>
         </div>
         <div className="flex items-center gap-1 bg-brand-primary/10 px-3 py-1 rounded-full">
             <span className="text-brand-primary font-bold text-sm">🔥 {userStreak}</span>
@@ -59,7 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
       </header>
 
       {/* Main Content */}
-      <main className="pt-16 md:pt-8 p-4 md:p-12 max-w-2xl mx-auto w-full animate-fade-in">
+      <main className={`pt-16 md:pt-8 p-4 md:p-12 max-w-2xl mx-auto w-full ${motionMode === 'full' ? 'anim-fade-slide' : ''}`}>
         {children}
       </main>
 
