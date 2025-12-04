@@ -9,7 +9,6 @@ interface DailyMissionProps {
   isCompleted: boolean;
   onComplete: () => void;
   isLocked?: boolean;
-  motionMode?: 'light' | 'full';
 }
 
 const Particles = ({ count }: { count: number }) => {
@@ -55,14 +54,24 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   mission, 
   isCompleted, 
   onComplete,
-  isLocked = false,
-  motionMode = 'light'
+  isLocked = false
 }) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoadingInsight, setIsLoadingInsight] = useState(false);
   const [showAction, setShowAction] = useState(isCompleted);
   const [isCompleting, setIsCompleting] = useState(false);
-  const particlesCount = motionMode === 'full' ? 14 : 0;
+  const particlesCount = isCompleted ? 18 : 0;
+
+  const heartBursts = useMemo(() => {
+    return Array.from({ length: 16 }).map((_, i) => {
+      const left = Math.random() * 100;
+      const delay = Math.random() * 0.6;
+      const size = 12 + Math.random() * 10;
+      const duration = 1.8 + Math.random() * 0.8;
+      const rotate = Math.random() * 40 - 20;
+      return { i, left, delay, size, duration, rotate };
+    });
+  }, []);
 
   useEffect(() => {
     if (isCompleted) {
@@ -133,11 +142,32 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
     return (
       <div className="bg-white p-6 md:p-10 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.05)] border border-brand-success/20 anim-scale-pop relative overflow-hidden transition-all duration-500">
         <Particles count={particlesCount} />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {heartBursts.map((h) => (
+            <div
+              key={h.i}
+              className="absolute text-brand-primary/80 anim-heart-float"
+              style={{
+                left: `${h.left}%`,
+                bottom: '-10%',
+                width: `${h.size}px`,
+                height: `${h.size}px`,
+                animationDelay: `${h.delay}s`,
+                animationDuration: `${h.duration}s`,
+                transform: `rotate(${h.rotate}deg)`
+              }}
+            >
+              <svg viewBox="0 0 24 24" className="w-full h-full fill-current">
+                <path d="M12 21s-7-4.35-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.65-7 10-7 10Z" />
+              </svg>
+            </div>
+          ))}
+        </div>
         
         <div className="absolute top-0 right-0 w-40 h-40 bg-green-50 rounded-full blur-3xl -z-0 transform translate-x-10 -translate-y-10 opacity-60"></div>
 
         <div className="relative z-10 text-center">
-          <div className={`group inline-flex items-center justify-center bg-green-100 text-green-700 p-4 rounded-full mb-6 shadow-sm cursor-default ${motionMode === 'full' ? 'anim-scale-pop hover:scale-110 transition-transform duration-300' : ''}`}>
+          <div className="group inline-flex items-center justify-center bg-green-100 text-green-700 p-4 rounded-full mb-6 shadow-sm cursor-default anim-scale-pop hover:scale-110 transition-transform duration-300">
             <CheckCircle className="w-10 h-10 group-hover:scale-110 transition-transform duration-300" />
           </div>
           
@@ -201,7 +231,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
         </p>
 
         <div className={`transition-all duration-500 overflow-hidden ${showAction ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className={`bg-brand-bg p-6 rounded-2xl border-l-4 border-brand-primary mb-8 ${motionMode === 'full' ? 'anim-fade-slide' : ''}`}>
+            <div className="bg-brand-bg p-6 rounded-2xl border-l-4 border-brand-primary mb-8 anim-fade-slide">
                 <h4 className="font-bold text-brand-accent mb-2 text-xs uppercase flex items-center gap-2">
                     <HeartHandshake className="w-4 h-4" /> Sua Ação:
                 </h4>
@@ -216,7 +246,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 variant="outline" 
                 fullWidth 
                 onClick={() => setShowAction(true)}
-                className={`py-4 border-dashed border-2 hover:bg-brand-bg hover:text-brand-primary hover:border-solid group ${motionMode === 'full' ? 'anim-pulse-soft' : ''}`}
+                className="py-4 border-dashed border-2 hover:bg-brand-bg hover:text-brand-primary hover:border-solid group anim-pulse-soft"
             >
                 <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
                 Ver a Missão de Hoje
@@ -226,7 +256,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 onClick={handleComplete} 
                 fullWidth 
                 disabled={isCompleted || isCompleting}
-                className={`py-4 text-lg bg-gradient-to-r from-brand-primary to-brand-accent shadow-lg shadow-brand-primary/30 transform transition active:scale-95 ${motionMode === 'full' ? 'anim-scale-pop' : ''}`}
+                className="py-4 text-lg bg-gradient-to-r from-brand-primary to-brand-accent shadow-lg shadow-brand-primary/30 transform transition active:scale-95 anim-scale-pop"
             >
                 {isCompleting ? 'Salvando...' : isCompleted ? 'Concluída' : 'Marcar como Concluída'}
             </Button>

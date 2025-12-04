@@ -70,6 +70,11 @@
                 '0%, 100%': { boxShadow: '0 0 0px rgba(200, 150, 210, 0.0)' },
                 '50%': { boxShadow: '0 0 30px rgba(200, 150, 210, 0.35)' }
               },
+              heartFloat: {
+                '0%': { transform: 'translateY(0) scale(0.9)', opacity: '0' },
+                '20%': { opacity: '1' },
+                '100%': { transform: 'translateY(-220px) scale(1.2)', opacity: '0' }
+              },
             }
           }
         }
@@ -111,6 +116,9 @@
       }
       .anim-slide-up {
         animation: slideUp var(--motion-duration-base) var(--motion-ease) both;
+      }
+      .anim-heart-float {
+        animation: heartFloat 2.2s ease-in-out forwards;
       }
       @media (prefers-reduced-motion: reduce) {
         .anim-fade-slide,

@@ -6,10 +6,9 @@ interface LayoutProps {
   userStreak: number;
   activeTab: 'mission' | 'history' | 'profile';
   onTabChange: (tab: 'mission' | 'history' | 'profile') => void;
-  motionMode: 'light' | 'full';
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab, onTabChange, motionMode }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab, onTabChange }) => {
   
   const NavItem = ({ icon: Icon, id, label }: { icon: any, id: 'mission' | 'history' | 'profile', label: string }) => {
     const isActive = activeTab === id;
@@ -20,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
           isActive ? 'text-brand-primary transform -translate-y-1' : 'text-gray-400'
         }`}
       >
-        <div className={`p-1 rounded-full transition-all duration-300 ${isActive ? 'bg-brand-bg' : ''} ${motionMode === 'full' && isActive ? 'anim-glow' : ''}`}>
+        <div className={`p-1 rounded-full transition-all duration-300 ${isActive ? 'bg-brand-bg anim-glow' : ''}`}>
           <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''}`} strokeWidth={isActive ? 2.5 : 2} />
         </div>
         <span className={`text-[10px] mt-1 font-medium tracking-wide ${isActive ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
@@ -60,7 +59,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
       </header>
 
       {/* Main Content */}
-      <main className={`pt-16 md:pt-8 p-4 md:p-12 max-w-2xl mx-auto w-full ${motionMode === 'full' ? 'anim-fade-slide' : ''}`}>
+      <main className="pt-16 md:pt-8 p-4 md:p-12 max-w-2xl mx-auto w-full anim-fade-slide">
         {children}
       </main>
 

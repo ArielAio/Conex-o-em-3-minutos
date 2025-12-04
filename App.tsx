@@ -11,7 +11,6 @@ import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, Ro
 import { auth, logoutUser, loginWithGoogle } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './components/Button';
-import { useMotionMode } from './hooks/useMotionMode';
 
 const getCurrentDayFromStart = (startDateStr?: string) => {
   const today = new Date();
@@ -35,7 +34,6 @@ const App = () => {
   const [currentDay, setCurrentDay] = useState(1);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'mission' | 'history' | 'profile'>('mission');
-  const { motionMode, toggleMotionMode } = useMotionMode();
   const [editName, setEditName] = useState('');
   const [editPartnerName, setEditPartnerName] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
@@ -141,7 +139,7 @@ const App = () => {
   };
 
   if (loading) {
-    return <div className={`min-h-screen flex items-center justify-center bg-brand-bg text-brand-primary ${motionMode === 'full' ? 'anim-pulse-soft' : ''}`}>
+    return <div className="min-h-screen flex items-center justify-center bg-brand-bg text-brand-primary anim-pulse-soft">
         <HeartPulse />
     </div>;
   }
@@ -169,7 +167,6 @@ const App = () => {
             mission={activeMission} 
             isCompleted={isCompleted} 
             onComplete={handleCompleteMission}
-            motionMode={motionMode}
           />
         ) : (
           <div className="text-center py-10 bg-white rounded-3xl p-8 shadow-sm">
@@ -231,8 +228,8 @@ const App = () => {
                     return (
                         <div 
                           key={mission.id} 
-                          className={`relative ${motionMode === 'full' ? 'anim-fade-slide-fast' : ''}`} 
-                          style={motionMode === 'full' ? { animationDelay: `${index * 35}ms` } : undefined}
+                          className="relative anim-fade-slide-fast" 
+                          style={{ animationDelay: `${index * 35}ms` }}
                         >
                             {/* Streak Connector Line */}
                             {isStreak && (
@@ -317,22 +314,6 @@ const App = () => {
                       <LogOut className="w-5 h-5" />
                   </button>
               )}
-          </div>
-
-          <div className="p-4 rounded-xl border border-gray-100 bg-white flex items-center gap-3">
-               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${motionMode === 'full' ? 'bg-brand-primary/10 anim-glow' : 'bg-gray-50'}`}>
-                   <Flame className="w-5 h-5 text-brand-primary" />
-               </div>
-               <div className="flex-1 text-left">
-                   <h4 className="font-semibold text-sm text-brand-text">Animações</h4>
-                   <p className="text-xs text-gray-500">Modo {motionMode === 'full' ? 'Completo' : 'Leve'} • seguro para baterias fracas</p>
-               </div>
-               <button 
-                 onClick={toggleMotionMode} 
-                 className="text-xs bg-brand-text text-white px-3 py-1 rounded-full transition-all hover:opacity-90"
-               >
-                 {motionMode === 'full' ? 'Usar leve' : 'Ativar completo'}
-               </button>
           </div>
 
           {auth.currentUser && (
@@ -449,12 +430,11 @@ const App = () => {
   );
 
   return (
-    <div className={`motion-${motionMode}`}>
+    <div>
       <Layout 
         userStreak={user.streak} 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
-        motionMode={motionMode}
       >
         {activeTab === 'mission' && renderMissionView()}
         {activeTab === 'history' && renderHistoryView()}
