@@ -5,7 +5,6 @@
 // FIREBASE_SERVICE_ACCOUNT (JSON string of service account)
 // CRON_SECRET (shared secret for Vercel Cron call)
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 
 // Init Firebase Admin once
@@ -44,7 +43,7 @@ const sendEmail = async (to: string, subject: string, text: string) => {
   }
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
