@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
+    { "src": "api/send-daily.ts", "use": "@vercel/node" }
+  ],
+  "crons": [
+    { "path": "/api/send-daily?secret=@cron_secret", "schedule": "0 13 * * *" }
+  ]
+}
