@@ -127,8 +127,8 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
     const titleLine = `${isCompleted ? 'Missão concluída' : 'Missão do dia'}: "${mission.title}" (Dia ${mission.day} • ${mission.theme})`;
     const actionLine = `Ação: ${mission.action}`;
     const inviteLine = isCompleted 
-      ? 'Quero compartilhar esse momento com você. ❤️'
-      : 'Topa fazer comigo hoje? ❤️';
+      ? 'Quero compartilhar esse momento com você.'
+      : 'Topa fazer comigo hoje?';
     const insightLine = insight ? `\nInsight que tive: "${insight}"` : '';
     const reflectionLine = reflection ? `\nMinha nota: "${reflection}"` : '';
 

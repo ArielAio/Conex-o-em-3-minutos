@@ -42,14 +42,6 @@ const getGreeting = () => {
   return 'Boa noite';
 };
 
-const MOOD_OPTIONS = [
-  { value: '😊', label: 'Leve' },
-  { value: '😌', label: 'Calmo' },
-  { value: '🤔', label: 'Pensativo' },
-  { value: '😣', label: 'Tenso' },
-  { value: '😍', label: 'Grato' },
-];
-
 const NEXT_STEP_SUGGESTIONS = [
   'Envie um áudio de 30s contando o melhor minuto do seu dia.',
   'Deixe um bilhete rápido com um elogio específico.',
@@ -70,7 +62,6 @@ const App = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [showNextMonthModal, setShowNextMonthModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [moodToday, setMoodToday] = useState<string>('');
   const [highlightReflection, setHighlightReflection] = useState<{ title: string; text: string } | null>(null);
   
   // Pagination state for history to prevent heavy rendering
@@ -122,9 +113,7 @@ const App = () => {
   }, [user]);
 
   useEffect(() => {
-    const storedMood = localStorage.getItem(`ce3m-mood-${todayKey}`);
-    if (storedMood) setMoodToday(storedMood);
-    // highlight reflection mais longa
+    // highlight reflexão mais longa
     let best: { title: string; text: string } | null = null;
     MISSIONS.forEach((mission) => {
       const reflection = localStorage.getItem(`ce3m-reflection-${mission.id}`);
@@ -238,33 +227,13 @@ const App = () => {
             <p className="text-gray-500 text-xs sm:text-sm">{formatToday()}</p>
         </header>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm card-padding soft-hover transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Check-in de humor</p>
-              {moodToday && <span className="text-sm">{moodToday}</span>}
-            </div>
-            <p className="text-xs text-gray-500 mb-3">Escolha um emoji para registrar como vocês chegaram hoje.</p>
-            <div className="flex gap-2">
-              {MOOD_OPTIONS.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => { setMoodToday(m.value); localStorage.setItem(`ce3m-mood-${todayKey}`, m.value); }}
-                  className={`px-3 py-2 rounded-xl border text-lg ${moodToday === m.value ? 'border-brand-primary bg-brand-primary/15' : 'border-gray-200 bg-gray-50'} hover:scale-105 transition`}
-                  aria-label={m.label}
-                >
-                  {m.value}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm card-padding soft-hover transition-all duration-300">
+        <div className="grid gap-3">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm card-padding soft-hover transition-all duration-300 w-full">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase text-gray-500 font-bold tracking-[0.2em]">Linha da semana</p>
               <span className="text-xs text-brand-primary font-semibold">Streak {user.streak}</span>
             </div>
-            <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-2 mt-3 w-full">
               {Array.from({ length: 7 }).map((_, idx) => {
                 const dayNumber = Math.max(1, currentDay - 6) + idx;
                 const mission = getMissionByDay(dayNumber);
@@ -444,7 +413,7 @@ const App = () => {
 
   const renderProfileView = () => (
       <div className="space-y-6 md:space-y-8">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 text-center relative rounded-surface card-padding card-float soft-hover transition-all duration-300">
+          <div className="bg-white p-6 md:p-7 rounded-3xl shadow-sm border border-gray-100 text-center relative rounded-surface card-padding card-float soft-hover transition-all duration-300 max-w-3xl mx-auto space-y-4">
               <div className="w-20 h-20 bg-brand-secondary/30 rounded-full mx-auto mb-4 flex items-center justify-center text-brand-primary overflow-hidden">
                   {auth.currentUser?.photoURL ? (
                       <img src={auth.currentUser.photoURL} alt={user.name} className="w-full h-full object-cover" />
@@ -457,11 +426,11 @@ const App = () => {
               <h2 className="font-serif heading-md text-brand-text mb-6">{user.partnerName}</h2>
               
               <div className="grid grid-cols-2 gap-3 sm:gap-5 border-t border-gray-100 pt-6">
-                  <div>
+                  <div className="text-center">
                       <span className="block text-2xl font-bold text-brand-primary">{user.streak}</span>
                       <span className="text-xs text-gray-400 uppercase">Dias Seguidos</span>
                   </div>
-                  <div>
+                  <div className="text-center">
                       <span className="block text-2xl font-bold text-brand-primary">{user.completedMissionIds.length}</span>
                       <span className="text-xs text-gray-400 uppercase">Missões</span>
                   </div>
@@ -531,12 +500,15 @@ const App = () => {
 
           {!user.isPremium && (
             <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 p-5 rounded-2xl border border-brand-primary/20 shadow-sm space-y-3 card-padding">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-brand-gold fill-brand-gold" />
-                <div>
-                  <p className="text-sm font-semibold text-brand-text">Assine para liberar tudo</p>
-                  <p className="text-xs text-gray-500">Teste premium por 7 dias • Sem fidelidade</p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-brand-gold fill-brand-gold" />
+                  <div>
+                    <p className="text-sm font-semibold text-brand-text">Assine para liberar tudo</p>
+                    <p className="text-xs text-gray-500">Teste premium por 7 dias • Sem fidelidade</p>
+                  </div>
                 </div>
+                <div className="text-sm text-gray-600 font-semibold">R$ 24,90 / mês</div>
               </div>
               <div className="grid sm:grid-cols-2 gap-3 text-sm text-brand-text">
                 <div className="flex items-start gap-2">
@@ -568,13 +540,12 @@ const App = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>R$ 24,90 / mês</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
                 <span>Cancele fácil no perfil</span>
+                <Button onClick={handleSubscribe} className="w-full sm:w-auto bg-brand-text text-white hover:bg-black px-6">
+                  Assinar e testar 7 dias
+                </Button>
               </div>
-              <Button onClick={handleSubscribe} className="w-full bg-brand-text text-white hover:bg-black">
-                Assinar e testar 7 dias
-              </Button>
             </div>
           )}
           

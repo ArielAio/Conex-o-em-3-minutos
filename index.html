@@ -98,8 +98,21 @@
         --shell-max: 1100px;
       }
       .app-shell {
-        width: min(var(--shell-max), calc(100% - 1.5rem));
+        width: 100%;
+        max-width: var(--shell-max);
         margin: 0 auto;
+        padding-left: clamp(1.25rem, 2vw, 2.25rem);
+        padding-right: clamp(1.25rem, 2vw, 2.25rem);
+      }
+      @media (min-width: 1280px) {
+        :root {
+          --shell-max: 1250px;
+        }
+      }
+      @media (min-width: 1536px) {
+        :root {
+          --shell-max: 1380px;
+        }
       }
       .pt-safe {
         padding-top: calc(0.75rem + var(--safe-top));
