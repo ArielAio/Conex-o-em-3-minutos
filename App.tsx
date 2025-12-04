@@ -4,10 +4,10 @@ import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
-import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress } from './services/storageService';
+import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription } from './services/storageService';
 import { getMissionByDay, MISSIONS } from './services/mockData';
 import { UserProgress, CURRENT_MONTH_THEME } from './types';
-import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock } from 'lucide-react';
 import { auth, logoutUser, loginWithGoogle } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './components/Button';
@@ -29,6 +29,12 @@ const formatToday = () => {
   return today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 };
 
+const NEXT_MONTH_PREVIEW = {
+  theme: 'Conflitos sem guerra',
+  missions: ['Pausa antes de responder', 'Regra do relógio', 'Debrief sem culpa'],
+  teaser: 'Mês 2 preparado para transformar conflitos em diálogo seguro.'
+};
+
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Bom dia';
@@ -46,6 +52,8 @@ const App = () => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirm, setResetConfirm] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [showNextMonthModal, setShowNextMonthModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   
   // Pagination state for history to prevent heavy rendering
   const [historyPage, setHistoryPage] = useState(1);
@@ -111,6 +119,9 @@ const App = () => {
     if (activeMission) {
       const updatedUser = await completeMission(activeMission.id, user);
       setUser(updatedUser);
+      if (activeMission.day === 30) {
+        setShowNextMonthModal(true);
+      }
     }
   };
 
@@ -150,6 +161,10 @@ const App = () => {
       setResetConfirm('');
       setResetSuccess(true);
       setTimeout(() => setResetSuccess(false), 2500);
+  };
+
+  const handleCancelSubscription = () => {
+    setShowCancelModal(true);
   };
 
   if (loading) {
@@ -211,6 +226,24 @@ const App = () => {
             <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Resumo rápido</p>
             <p className="text-sm text-brand-text">Streak: <span className="font-semibold">{user.streak}</span> dia(s)</p>
             <p className="text-sm text-gray-500">Missões concluídas: <span className="font-semibold text-brand-primary">{user.completedMissionIds.length}</span></p>
+          </div>
+        </div>
+
+        <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-5 shadow-sm card-padding">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Próximo mês</p>
+            <span className="text-[11px] text-gray-500">Teste 7 dias • sem fidelidade</span>
+          </div>
+          <p className="font-serif text-lg text-brand-text">{NEXT_MONTH_PREVIEW.theme}</p>
+          <p className="text-sm text-gray-600">{NEXT_MONTH_PREVIEW.teaser}</p>
+          <div className="mt-3 space-y-2">
+            {NEXT_MONTH_PREVIEW.missions.map((m, i) => (
+              <div key={m} className="flex items-center gap-2 text-sm text-brand-text">
+                <Lock className="w-4 h-4 text-gray-400" />
+                <span className="font-semibold">Missão {i + 1} •</span>
+                <span className="text-gray-600">“{m}” (bloqueada até assinar)</span>
+              </div>
+            ))}
           </div>
         </div>
     </div>
@@ -345,6 +378,92 @@ const App = () => {
                   <LogOut className="w-4 h-4" /> Sair
                 </Button>
               </div>
+            </div>
+          )}
+
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm card-padding">
+            <h3 className="text-sm font-semibold text-brand-text mb-3">Selos de hábito</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {[{label: '3 dias', threshold: 3}, {label: '7 dias', threshold: 7}, {label: '14 dias', threshold: 14}].map(({label, threshold}) => {
+                const lockedByPlan = !user.isPremium;
+                const achieved = !lockedByPlan && user.streak >= threshold;
+                const locked = lockedByPlan;
+                return (
+                  <div key={label} className={`p-3 rounded-xl border text-center ${achieved ? 'border-brand-primary/40 bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} ${locked ? 'opacity-70' : ''}`}>
+                    <p className="text-xs font-bold text-gray-500 uppercase">{label}</p>
+                    <p className="text-sm text-brand-text font-semibold">
+                      {locked ? 'Assine para liberar' : achieved ? 'Conquistado' : 'Em progresso'}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {user.isPremium && (
+            <div className="bg-white p-4 rounded-xl border border-gray-100 soft-hover transition-all duration-300">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-brand-text">Plano ativo</p>
+                  <p className="text-xs text-gray-500">Cancele quando quiser. O acesso vai até o fim do ciclo pago.</p>
+                </div>
+                <Button 
+                  onClick={handleCancelSubscription} 
+                  variant="outline" 
+                  className="text-sm px-4 py-2 border-red-200 text-red-500 hover:bg-red-50"
+                >
+                  Cancelar assinatura
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!user.isPremium && (
+            <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 p-5 rounded-2xl border border-brand-primary/20 shadow-sm space-y-3 card-padding">
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-brand-gold fill-brand-gold" />
+                <div>
+                  <p className="text-sm font-semibold text-brand-text">Assine para liberar tudo</p>
+                  <p className="text-xs text-gray-500">Teste premium por 7 dias • Sem fidelidade</p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3 text-sm text-brand-text">
+                <div className="flex items-start gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <div>
+                    <p className="font-semibold">Mês 2: Conflitos sem guerra</p>
+                    <p className="text-xs text-gray-500">Missões bloqueadas liberadas automaticamente.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <div>
+                    <p className="font-semibold">PDF premium</p>
+                    <p className="text-xs text-gray-500">Com reflexões salvas e estatísticas do mês.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <div>
+                    <p className="font-semibold">Rituais semanais extras</p>
+                    <p className="text-xs text-gray-500">Check-ins para manter o ritmo e reduzir ruído.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <div>
+                    <p className="font-semibold">Histórico ilimitado + selos</p>
+                    <p className="text-xs text-gray-500">Veja todo o caminho e libere os selos de hábito.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>R$ 24,90 / mês</span>
+                <span>Cancele fácil no perfil</span>
+              </div>
+              <Button onClick={handleSubscribe} className="w-full bg-brand-text text-white hover:bg-black">
+                Assinar e testar 7 dias
+              </Button>
             </div>
           )}
           
@@ -499,6 +618,83 @@ const App = () => {
                 disabled={resetConfirm.trim().toUpperCase() !== 'RESET'}
               >
                 Resetar agora
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNextMonthModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 space-y-6 border border-brand-primary/20 card-padding">
+            <div className="flex items-start gap-3">
+              <div className="bg-brand-primary/15 text-brand-primary p-3 rounded-2xl">
+                <Star className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Parabéns, ciclo fechado</p>
+                <h3 className="font-serif text-2xl text-brand-text leading-snug">Prontos para o próximo mês?</h3>
+                <p className="text-sm text-gray-600 mt-2">{NEXT_MONTH_PREVIEW.teaser}</p>
+              </div>
+            </div>
+
+            <div className="bg-brand-bg border border-gray-100 rounded-2xl p-4 space-y-3">
+              <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Mês 2 • {NEXT_MONTH_PREVIEW.theme}</p>
+              <div className="space-y-2">
+                {NEXT_MONTH_PREVIEW.missions.map((m, i) => (
+                  <div key={m} className="flex items-center gap-2 text-sm text-brand-text">
+                    <Lock className="w-4 h-4 text-gray-400" />
+                    <span className="font-semibold">Missão {i + 1} •</span>
+                    <span className="text-gray-600">“{m}” (bloqueada até assinar)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-xs text-gray-500">
+                Teste premium 7 dias • cancele fácil
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setShowNextMonthModal(false)}>Depois</Button>
+                <Button className="w-full sm:w-auto" onClick={() => { handleSubscribe(); setShowNextMonthModal(false); }}>
+                  Assinar e desbloquear
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-4 border border-gray-200">
+            <div className="flex items-start gap-3">
+              <div className="bg-red-50 text-red-500 p-3 rounded-2xl">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Cancelar assinatura</p>
+                <h3 className="font-serif text-xl text-brand-text leading-snug">Tem certeza?</h3>
+                <p className="text-sm text-gray-600 mt-2">
+                  Você mantém acesso até o fim do ciclo pago. Depois volta para o plano gratuito e o histórico continua salvo.
+                </p>
+              </div>
+            </div>
+            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600">
+              O cancelamento é processado no gateway (Stripe/Mercado Pago). Clique abaixo para simular o cancelamento agora.
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setShowCancelModal(false)}>Voltar</Button>
+              <Button 
+                variant="outline" 
+                className="border-red-200 text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  setShowCancelModal(false);
+                  cancelSubscription().then(setUser);
+                }}
+              >
+                Confirmar cancelamento
               </Button>
             </div>
           </div>

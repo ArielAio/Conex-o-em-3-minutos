@@ -11,6 +11,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [step, setStep] = useState(0); // 0 = Welcome/Login, 1 = My Name, 2 = Partner Name
     const [name, setName] = useState('');
     const [partnerName, setPartnerName] = useState('');
+    const [mode, setMode] = useState<'solo' | 'couple'>('couple');
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState<{title: string, detail: string, domain?: string} | null>(null);
     const [copied, setCopied] = useState(false);
@@ -61,7 +62,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     };
 
     const handleNext = () => {
-        if (step === 1 && name) setStep(2);
+        if (step === 1 && name) {
+            if (mode === 'solo') {
+                onComplete(name, 'Minha jornada');
+            } else {
+                setStep(2);
+            }
+        }
         else if (step === 2 && partnerName) onComplete(name, partnerName);
     };
 
@@ -80,8 +87,25 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         <div className="animate-slide-up space-y-4">
                             <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">Bem-vindo(a)</h1>
                             <p className="text-gray-500 mb-6 text-sm leading-relaxed">
-                                Salve seu progresso e conecte-se de verdade. <br/>Entre para não perder suas memórias.
+                                Escolha como quer viver a jornada: sozinho(a), focando em autocuidado e comunicação futura, ou em casal para fortalecer o vínculo.
                             </p>
+
+                            <div className="grid grid-cols-2 gap-2 text-left mb-6">
+                                <button
+                                  onClick={() => setMode('solo')}
+                                  className={`p-3 rounded-xl border ${mode === 'solo' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} text-sm transition-all`}
+                                >
+                                  <p className="font-semibold text-brand-text">Solo</p>
+                                  <p className="text-xs text-gray-500">Autocuidado, comunicação futura, presença consigo.</p>
+                                </button>
+                                <button
+                                  onClick={() => setMode('couple')}
+                                  className={`p-3 rounded-xl border ${mode === 'couple' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} text-sm transition-all`}
+                                >
+                                  <p className="font-semibold text-brand-text">Casal</p>
+                                  <p className="text-xs text-gray-500">Rituais a dois, redução de ruídos, alinhamento diário.</p>
+                                </button>
+                            </div>
                             
                             {errorMsg && (
                                 <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-left mb-4">
@@ -150,7 +174,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     {step === 1 && (
                         <div className="animate-slide-up">
                             <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">Como você se chama?</h1>
-                            <p className="text-gray-500 mb-6">Para personalizar sua experiência.</p>
+                            <p className="text-gray-500 mb-6">
+                                {mode === 'solo' ? 'Vamos personalizar sua jornada de autocuidado.' : 'Para personalizar a experiência do casal.'}
+                            </p>
                             <input 
                                 type="text"
                                 value={name}
@@ -165,7 +191,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         </div>
                     )}
 
-                    {step === 2 && (
+                    {step === 2 && mode === 'couple' && (
                         <div className="animate-slide-up">
                              <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">E seu parceiro(a)?</h1>
                              <p className="text-gray-500 mb-6">Como se chama seu amor?</p>
@@ -185,7 +211,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </div>
                 
                 <p className="text-center text-gray-400 text-xs mt-8">
-                    Conexão em 3 Minutos • Versão MVP
+                    Conexão em 3 Minutos • Jornada guiada de 7 dias gratuita
                 </p>
             </div>
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CalendarRange, Check, Clock, FileText, Flame, Heart, Lock, Mail, Shield, Sparkles, Star, Unlock } from 'lucide-react';
+import { ArrowRight, CalendarRange, Check, Clock3, FileText, Flame, Heart, Lock, Mail, Shield, Sparkles, Star, Unlock } from 'lucide-react';
 
 interface LandingPageProps {
   onStart: () => void;
@@ -25,6 +25,12 @@ const bonuses = [
   { icon: CalendarRange, label: 'Temas mensais já prontos', accent: 'Rápido' },
   { icon: Star, label: 'Rituais extras no plano premium', accent: 'Premium' },
 ];
+
+const nextTheme = {
+  title: 'Mês 2: Conflitos sem guerra',
+  teaser: 'Estratégias práticas para discordar sem machucar e retomar o carinho rápido.',
+  missions: ['Pausa antes de responder', 'Regra do relógio', 'Debrief sem culpa'],
+};
 
 const testimonials = [
   {
@@ -111,7 +117,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                   className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full border border-gray-200 text-brand-text bg-white/70 hover:bg-white"
                 >
                   Ver como funciona
-                  <Clock className="w-4 h-4" />
+                  <Clock3 className="w-4 h-4" />
                 </a>
               </div>
               <div className="flex flex-wrap gap-4 pt-4">
@@ -224,6 +230,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="relative bg-brand-primary/8 border border-brand-primary/20 rounded-3xl p-8 space-y-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Próximo mês liberado no premium</p>
+          <h2 className="font-serif text-2xl sm:text-3xl text-brand-text">{nextTheme.title}</h2>
+          <p className="text-gray-600 max-w-2xl">{nextTheme.teaser}</p>
+          <div className="grid sm:grid-cols-3 gap-3 mt-3">
+            {nextTheme.missions.map((m, i) => (
+              <div key={m} className="p-4 rounded-2xl bg-white border border-gray-100 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Missão {i + 1}</p>
+                  <p className="text-sm text-brand-text font-semibold">“{m}”</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-gray-600">Teste premium por 7 dias e continue a jornada sem travar.</p>
+            <button
+              onClick={onStart}
+              className="inline-flex items-center justify-center gap-2 bg-brand-text text-white px-6 py-3 rounded-full font-semibold hover:translate-y-[-1px] transition-transform duration-200 shadow-lg shadow-brand-primary/30"
+            >
+              Desbloquear mês 2
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </section>
 

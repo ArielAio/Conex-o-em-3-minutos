@@ -148,6 +148,13 @@ export const upgradeUser = async (): Promise<UserProgress> => {
     return user;
 }
 
+export const cancelSubscription = async (): Promise<UserProgress> => {
+    const user = getLocalData();
+    user.isPremium = false;
+    await saveUserData(user);
+    return user;
+}
+
 export const resetProgress = async (): Promise<UserProgress> => {
     const local = getLocalData();
     const now = new Date().toISOString();

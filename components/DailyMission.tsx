@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Mission } from '../types';
 import { Button } from './Button';
-import { CheckCircle, Lock, Sparkles, Share2, ChevronDown, HeartHandshake, Clock } from 'lucide-react';
+import { CheckCircle, Lock, Sparkles, Share2, ChevronDown, HeartHandshake, Clock3 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 
 interface DailyMissionProps {
@@ -61,8 +61,10 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   const [showCompletedDetails, setShowCompletedDetails] = useState(isCompleted);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [reflection, setReflection] = useState<string>('');
   const particlesCount = isCompleted ? 18 : 0;
   const shareCardRef = useRef<HTMLDivElement | null>(null);
+  const reflectionKey = useMemo(() => `ce3m-reflection-${mission.id}`, [mission.id]);
 
   const heartBursts = useMemo(() => {
     return Array.from({ length: 16 }).map((_, i) => {
@@ -83,6 +85,11 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
       setShowCompletedDetails(false);
     }
   }, [isCompleted, mission.id]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(reflectionKey);
+    if (stored) setReflection(stored);
+  }, [reflectionKey]);
 
   const handleComplete = async () => {
     if (isCompleted || isCompleting) return;
@@ -123,9 +130,10 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
       ? 'Quero compartilhar esse momento com você. ❤️'
       : 'Topa fazer comigo hoje? ❤️';
     const insightLine = insight ? `\nInsight que tive: "${insight}"` : '';
+    const reflectionLine = reflection ? `\nMinha nota: "${reflection}"` : '';
 
     const linkLine = 'Acesse: https://conexao-em-3-minutos.vercel.app';
-    return `${titleLine}\n${actionLine}\n${inviteLine}${insightLine}\n${linkLine}`;
+    return `${titleLine}\n${actionLine}\n${inviteLine}${insightLine}${reflectionLine}\n${linkLine}`;
   };
 
   const handleShare = async () => {
@@ -264,7 +272,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
               className="w-full flex items-center justify-between bg-white/70 border border-brand-primary/20 rounded-2xl px-4 py-3 text-sm font-semibold text-brand-text shadow-sm hover:border-brand-primary/40 transition"
             >
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-brand-primary" />
+                <Clock3 className="w-4 h-4 text-brand-primary" />
                 <span>Ver missão realizada</span>
               </div>
               <ChevronDown
@@ -324,6 +332,12 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 </p>
               </div>
             )}
+            {reflection && (
+              <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-3 shadow-sm">
+                <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-1">Minha nota</p>
+                <p className="text-sm text-brand-text">{reflection}</p>
+              </div>
+            )}
             <div className="flex items-center justify-between pt-2">
               <div className="text-xs text-gray-500">
                 conclua e compartilhe seu momento • conexaoem3min.com
@@ -336,7 +350,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
       <div className="bg-brand-primary/10 p-5 sm:p-6 pb-12 relative">
           <div className="absolute top-4 right-4">
                <span className="bg-white/80 backdrop-blur-sm text-brand-text px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
-                 <Clock className="w-3 h-3" /> 3 min
+                 <Clock3 className="w-3 h-3" /> 3 min
                </span>
           </div>
           <span className="text-brand-primary font-bold text-xs uppercase tracking-widest">Dia {mission.day}</span>
@@ -359,6 +373,23 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 <p className="text-[clamp(1.05rem,2.6vw,1.3rem)] text-gray-800 font-serif leading-snug">
                 {mission.action}
                 </p>
+            </div>
+
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-2 shadow-sm card-padding mb-6">
+              <p className="text-xs uppercase text-gray-400 font-bold tracking-[0.2em]">Reflexão em 1 linha</p>
+              <p className="text-xs text-gray-500">O que funcionou hoje? Anote um lembrete curto para vocês do futuro.</p>
+              <input
+                value={reflection}
+                onChange={(e) => {
+                  const v = e.target.value.slice(0, 140);
+                  setReflection(v);
+                  localStorage.setItem(reflectionKey, v);
+                }}
+                maxLength={140}
+                placeholder="Ex.: respiramos antes de responder e a conversa ficou leve."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
+              <p className="text-[11px] text-gray-400 text-right">{reflection.length}/140</p>
             </div>
 
             <div className="bg-white/95 border border-brand-primary/25 rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8 card-padding">

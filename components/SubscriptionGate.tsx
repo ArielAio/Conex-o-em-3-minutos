@@ -14,17 +14,17 @@ export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({ onSubscribe 
       </div>
       <h2 className="font-serif text-2xl text-brand-text mb-2">Desbloqueie a Conexão Profunda</h2>
       <p className="text-gray-500 mb-6 max-w-md mx-auto">
-        Garanta o próximo mês de missões, acesso ao histórico completo e insights ilimitados de IA.
+        7 dias para testar o premium: próximo mês, histórico completo e PDF especial.
       </p>
       
       <div className="grid md:grid-cols-2 gap-4 max-w-lg mx-auto mb-8 text-left">
         <div className="flex items-center gap-2 text-sm text-gray-600">
             <Check className="w-4 h-4 text-green-500" />
-            <span>Acesso ao Mês 2: Intimidade</span>
+            <span>Acesso ao Mês 2: Conflitos sem guerra</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
             <Check className="w-4 h-4 text-green-500" />
-            <span>PDF Mensal Premium</span>
+            <span>PDF premium com reflexões e estatísticas</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
             <Check className="w-4 h-4 text-green-500" />
@@ -32,14 +32,15 @@ export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({ onSubscribe 
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
             <Check className="w-4 h-4 text-green-500" />
-            <span>Insights de IA Personalizados</span>
+            <span>Histórico ilimitado + selos liberados</span>
         </div>
       </div>
 
       <Button onClick={onSubscribe} className="bg-brand-text text-white hover:bg-black w-full md:w-auto px-8">
-        Assinar por R$ 24,90/mês
+        Assinar e testar 7 dias
       </Button>
-      <p className="text-xs text-gray-400 mt-4">Cancele quando quiser.</p>
+      <p className="text-xs text-gray-400 mt-4">Cancele quando quiser. Sem fidelidade.</p>
+      <p className="text-[11px] text-gray-400 mt-1">Link para cancelamento na área de perfil (plano ativo).</p>
     </div>
   );
 };
