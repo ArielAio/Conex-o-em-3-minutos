@@ -64,14 +64,14 @@ const faqs = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
-    <div className="bg-brand-bg text-brand-text min-h-screen overflow-hidden">
+    <div className="bg-brand-bg text-brand-text min-h-screen overflow-hidden relative w-full">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-32 -left-16 w-72 h-72 bg-gradient-to-br from-brand-primary/25 to-brand-secondary/30 blur-3xl" />
         <div className="absolute top-40 -right-12 w-64 h-64 bg-gradient-to-br from-amber-200/30 to-brand-primary/20 blur-3xl" />
         <div className="absolute bottom-0 left-10 w-40 h-40 bg-gradient-to-br from-brand-secondary/40 to-transparent blur-2xl" />
       </div>
 
-      <header className="relative app-shell px-safe pt-8 pb-6 flex items-center justify-between">
+      <header className="relative app-shell px-safe pt-8 pb-6 flex items-center justify-between w-full overflow-hidden">
         <div className="flex items-center gap-2">
           <Heart className="w-8 h-8 text-brand-primary fill-brand-primary drop-shadow-sm" />
           <div>
@@ -88,7 +88,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </button>
       </header>
 
-      <main className="relative app-shell px-safe pb-16 space-y-24">
+      <main className="relative app-shell px-safe pb-16 space-y-24 w-full overflow-hidden">
         <section className="relative rounded-3xl bg-white/80 border border-white/60 shadow-[0_30px_80px_rgba(0,0,0,0.08)] overflow-hidden">
           <div className="absolute -right-16 -top-16 w-72 h-72 bg-gradient-to-br from-brand-primary/25 to-brand-secondary/25 blur-3xl" />
           <div className="grid md:grid-cols-2 gap-10 lg:gap-14 p-8 sm:p-10 md:p-12 relative z-10">

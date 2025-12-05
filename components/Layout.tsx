@@ -60,7 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
       </header>
 
       {/* Main Content */}
-      <main className="pt-20 md:pt-12 px-safe pb-6 md:pb-14 app-shell w-full">
+      <main className="pt-20 md:pt-12 px-safe pb-6 md:pb-14 app-shell w-full overflow-hidden">
         {children}
       </main>
 
