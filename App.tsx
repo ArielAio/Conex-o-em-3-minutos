@@ -6,24 +6,14 @@ import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
 import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection, clearLocalUserData, DEFAULT_USER, saveUserData } from './services/storageService';
 import { MISSIONS, getMissionForDayRandom, getShuffledMissions, getMissionByIdMode, adaptMission } from './services/mockData';
+
+const DEFAULT_MISSION_ORDER = MISSIONS.map((m) => m.id);
 import { UserProgress, CURRENT_MONTH_THEME, Mission } from './types';
 import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock, Sparkles } from 'lucide-react';
 import { auth, logoutUser, loginWithGoogle } from './services/firebase';
 import { translateAuthError } from './services/firebaseErrors';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './components/Button';
-
-const getCurrentDayFromStart = (startDateStr?: string) => {
-  const today = new Date();
-  const start = startDateStr ? new Date(startDateStr) : new Date();
-  const isValid = !isNaN(start.getTime());
-  const startDate = isValid ? start : new Date();
-
-  const startMid = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
-  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const diffDays = Math.max(0, Math.floor((todayMid - startMid) / 86400000));
-  return Math.min(MISSIONS.length, diffDays + 1);
-};
 
 const formatToday = () => {
   const today = new Date();
@@ -151,7 +141,6 @@ const DISTANCE_NEXT_STEP_SUGGESTIONS = [
 
 const App = () => {
   const [user, setUser] = useState<UserProgress | null>(null);
-  const [currentDay, setCurrentDay] = useState(1);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'mission' | 'history' | 'profile'>('mission');
   const [editName, setEditName] = useState('');
@@ -176,9 +165,12 @@ const App = () => {
   const shuffleSeed = user?.startDate || new Date().toISOString();
 
   const getMissionForDay = (day: number): Mission | undefined => {
-    const missionId = missionOrder[day - 1];
-    const fromOrder = missionId ? getMissionByIdMode(missionId, missionMode || 'couple') : undefined;
-    if (fromOrder) return fromOrder;
+    const order = missionOrder.length === MISSIONS.length ? missionOrder : DEFAULT_MISSION_ORDER;
+    const missionId = order[day - 1];
+    if (missionId) {
+      const fromOrder = getMissionByIdMode(missionId, missionMode || 'couple');
+      if (fromOrder) return fromOrder;
+    }
     return getMissionForDayRandom(day, missionMode || 'couple', shuffleSeed);
   };
   const [highlightReflection, setHighlightReflection] = useState<{ title: string; text: string } | null>(null);
@@ -195,9 +187,6 @@ const App = () => {
     try {
       const data = await getUserData();
       setUser(data);
-
-      const dayByCalendar = getCurrentDayFromStart(data.startDate);
-      setCurrentDay(dayByCalendar);
     } catch (error) {
       console.error("Erro carregando dados do usuário, usando visitante", error);
       const fallback: UserProgress = {
@@ -214,7 +203,6 @@ const App = () => {
         reflections: {},
       };
       setUser(fallback);
-      setCurrentDay(getCurrentDayFromStart(fallback.startDate));
     } finally {
       setLoading(false);
     }
@@ -236,11 +224,9 @@ const App = () => {
       setModeName(user.name || '');
       setModePartnerName(user.partnerName || '');
       setMissionMode(user.mode || 'couple');
-      const seed = `${user.startDate}-${user.email || user.username || user.name || 'guest'}`;
-      const hasOrder = Array.isArray(user.missionOrder) && user.missionOrder.length === MISSIONS.length;
-      const order = hasOrder ? user.missionOrder! : getShuffledMissions(seed).map((m) => m.id);
+      const order = DEFAULT_MISSION_ORDER;
       setMissionOrder(order);
-      if (!hasOrder) {
+      if (!Array.isArray(user.missionOrder) || user.missionOrder.length !== order.length || user.missionOrder.some((id, idx) => id !== order[idx])) {
         const updated = { ...user, missionOrder: order };
         saveUserData(updated);
         setUser(updated);
@@ -322,7 +308,6 @@ const App = () => {
       } finally {
         clearLocalUserData();
         setUser(null);
-        setCurrentDay(1);
         setMissionMode('couple');
         setModeSelection('couple');
         setActiveTab('mission');
@@ -360,7 +345,6 @@ const App = () => {
       if (!confirmed) return;
       const updated = await resetProgress();
       setUser(updated);
-      setCurrentDay(1);
       setShowResetModal(false);
       setResetConfirm('');
       setResetSuccess(true);
@@ -423,6 +407,11 @@ const App = () => {
     }
     return '';
   };
+
+  const currentDay = useMemo(() => {
+    const completedCount = user?.completedMissionIds?.length || 0;
+    return Math.min(MISSIONS.length, completedCount + 1);
+  }, [user]);
 
   const activeMission = useMemo(() => {
     if (!user) return undefined;
@@ -646,8 +635,7 @@ const App = () => {
 
   const renderHistoryView = () => {
     // Pagination Logic
-    const seed = user.startDate || new Date().toISOString();
-    const orderIds = missionOrder.length === MISSIONS.length ? missionOrder : getShuffledMissions(seed).map((m) => m.id);
+    const orderIds = missionOrder.length === MISSIONS.length ? missionOrder : DEFAULT_MISSION_ORDER;
     const visibleIds = orderIds.slice(0, historyPage * ITEMS_PER_PAGE);
     const hasMore = visibleIds.length < orderIds.length;
 

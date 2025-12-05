@@ -1025,11 +1025,6 @@ export const getShuffledMissions = (
   seed: string
 ): Mission[] => {
   const list = [...MISSIONS];
-  const rand = mulberry32(hashString(seed || "default"));
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
-  }
   return list;
 };
 
