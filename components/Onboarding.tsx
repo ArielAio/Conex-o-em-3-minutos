@@ -5,14 +5,14 @@ import { createAccountWithEmail, loginWithEmail, loginWithGoogle } from '../serv
 import { translateAuthError } from '../services/firebaseErrors';
 
 interface OnboardingProps {
-    onComplete: (name: string, partnerName: string, mode: 'solo' | 'couple') => void;
+    onComplete: (name: string, partnerName: string, mode: 'solo' | 'couple' | 'distance') => void;
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [step, setStep] = useState<number | 'modeConfirm'>(0); // 0 = Welcome/Login, 1 = My Name, 2 = Partner Name, modeConfirm = pós signup
     const [name, setName] = useState('');
     const [partnerName, setPartnerName] = useState('');
-    const [mode, setMode] = useState<'solo' | 'couple' | null>(null);
+    const [mode, setMode] = useState<'solo' | 'couple' | 'distance' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [authMode, setAuthMode] = useState<'choice' | 'signup' | 'signin'>('choice');
     const [authLoading, setAuthLoading] = useState(false);
@@ -75,14 +75,18 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 setStep(2);
             }
         }
-        else if (step === 2 && partnerName) onComplete(name, partnerName, 'couple');
+        else if (step === 2 && partnerName && mode) {
+          onComplete(name, partnerName, mode === 'distance' ? 'distance' : 'couple');
+        }
     };
 
-    const handleModeAfterSignup = (selected: 'solo' | 'couple') => {
+    const handleModeAfterSignup = (selected: 'solo' | 'couple' | 'distance') => {
         setMode(selected);
         if (!name.trim()) return;
         if (selected === 'solo') {
             onComplete(name.trim(), 'Minha jornada', 'solo');
+        } else if (selected === 'couple') {
+            setStep(2);
         } else {
             setStep(2);
         }
@@ -157,11 +161,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             <p className="text-gray-500 mb-6 text-sm leading-relaxed">
                                 {authMode === 'signin'
                                   ? "Entre na sua conta para continuar de onde parou."
-                                  : "Escolha como quer viver a jornada: sozinho(a) ou em casal. Você pode ajustar depois no perfil."}
+                                  : "Escolha como quer viver a jornada: sozinho(a), em casal presencial ou à distância. Você pode ajustar depois no perfil."}
                             </p>
 
                             {authMode !== 'signin' && (
-                              <div className="grid grid-cols-2 gap-2 text-left mb-6">
+                              <div className="grid grid-cols-3 gap-2 text-left mb-6">
                                   <button
                                     onClick={() => setMode('solo')}
                                     className={`p-3 rounded-xl border ${mode === 'solo' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} text-sm transition-all`}
@@ -175,6 +179,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                   >
                                     <p className="font-semibold text-brand-text">Casal</p>
                                     <p className="text-xs text-gray-500">Rituais a dois, redução de ruídos, alinhamento diário.</p>
+                                  </button>
+                                  <button
+                                    onClick={() => setMode('distance')}
+                                    className={`p-3 rounded-xl border ${mode === 'distance' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} text-sm transition-all`}
+                                  >
+                                    <p className="font-semibold text-brand-text">Casal à distância</p>
+                                    <p className="text-xs text-gray-500">Chamadas, áudios e rituais remotos.</p>
                                   </button>
                               </div>
                             )}
@@ -361,9 +372,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         <div className="animate-slide-up space-y-4">
                             <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">Como quer seguir?</h1>
                             <p className="text-gray-500 text-sm leading-relaxed">
-                                Escolha se vai fazer a jornada solo ou em casal. Assim entramos direto do jeito certo.
+                                Escolha se vai fazer a jornada solo, em casal presencial ou à distância. Assim entramos direto do jeito certo.
                             </p>
-                            <div className="grid grid-cols-2 gap-2 text-left">
+                            <div className="grid grid-cols-3 gap-2 text-left">
                                 <button
                                   onClick={() => handleModeAfterSignup('solo')}
                                   className="p-4 rounded-xl border border-gray-200 bg-gray-50 text-sm transition-all hover:border-brand-primary hover:bg-brand-primary/10"
@@ -378,6 +389,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                   <p className="font-semibold text-brand-text">Casal</p>
                                   <p className="text-xs text-gray-500">Rituais e conexão a dois.</p>
                                 </button>
+                                <button
+                                  onClick={() => handleModeAfterSignup('distance')}
+                                  className="p-4 rounded-xl border border-gray-200 bg-gray-50 text-sm transition-all hover:border-brand-primary hover:bg-brand-primary/10"
+                                >
+                                  <p className="font-semibold text-brand-text">Casal à distância</p>
+                                  <p className="text-xs text-gray-500">Roteiros remotos guiados.</p>
+                                </button>
                             </div>
                             <p className="text-[11px] text-gray-500">
                                 Não se preocupe: você pode alterar depois nas informações do perfil.
@@ -389,10 +407,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         <div className="animate-slide-up">
                             <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">Como você se chama?</h1>
                             <p className="text-gray-500 mb-6">
-                                {mode === 'solo' ? 'Vamos personalizar sua jornada de autocuidado.' : mode === 'couple' ? 'Para personalizar a experiência do casal.' : 'Escolha solo ou casal para continuarmos.'}
+                                {mode === 'solo' 
+                                  ? 'Vamos personalizar sua jornada de autocuidado.' 
+                                  : mode === 'couple' 
+                                    ? 'Para personalizar a experiência do casal.' 
+                                    : mode === 'distance'
+                                      ? 'Vamos montar rituais para vocês na chamada e por áudio.'
+                                      : 'Escolha um modo para continuarmos.'}
                             </p>
                             {!mode && (
-                              <div className="grid grid-cols-2 gap-2 text-left mb-4">
+                              <div className="grid grid-cols-3 gap-2 text-left mb-4">
                                   <button
                                     onClick={() => setMode('solo')}
                                     className="p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm transition-all hover:border-brand-primary hover:bg-brand-primary/10"
@@ -406,6 +430,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                   >
                                     <p className="font-semibold text-brand-text">Casal</p>
                                     <p className="text-xs text-gray-500">A dois</p>
+                                  </button>
+                                  <button
+                                    onClick={() => setMode('distance')}
+                                    className="p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm transition-all hover:border-brand-primary hover:bg-brand-primary/10"
+                                  >
+                                    <p className="font-semibold text-brand-text">À distância</p>
+                                    <p className="text-xs text-gray-500">Chamadas e áudios</p>
                                   </button>
                               </div>
                             )}
@@ -423,10 +454,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         </div>
                     )}
 
-                    {step === 2 && mode === 'couple' && (
+                    {step === 2 && (mode === 'couple' || mode === 'distance') && (
                         <div className="animate-slide-up">
                              <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">E seu parceiro(a)?</h1>
-                             <p className="text-gray-500 mb-6">Como se chama seu amor?</p>
+                             <p className="text-gray-500 mb-6">
+                              {mode === 'distance' ? 'Como se chama quem vai fazer a jornada com você à distância?' : 'Como se chama seu amor?'}
+                             </p>
                              <input 
                                 type="text"
                                 value={partnerName}

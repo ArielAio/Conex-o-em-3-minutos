@@ -44,7 +44,7 @@ const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
     username: data.username || '',
     email: data.email || '',
     partnerName: data.partnerName || '',
-    mode: data.mode === 'solo' || data.mode === 'couple' ? data.mode : 'couple',
+    mode: data.mode === 'solo' || data.mode === 'couple' || data.mode === 'distance' ? data.mode : 'couple',
     startDate: data.startDate || new Date().toISOString(),
     completedMissionIds: Array.isArray(data.completedMissionIds) ? data.completedMissionIds : [],
     isPremium: data.isPremium || false,
@@ -191,7 +191,7 @@ export const updateUserProfile = async (name: string, partnerName: string, mode?
   user.partnerName = partnerName;
   user.username = user.username || name;
   user.email = user.email || auth.currentUser?.email || '';
-  if (mode === 'solo' || mode === 'couple') {
+  if (mode === 'solo' || mode === 'couple' || mode === 'distance') {
     user.mode = mode;
   }
   user.startDate = user.startDate || new Date().toISOString();

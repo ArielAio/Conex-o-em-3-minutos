@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Layout } from './components/Layout';
 import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
 import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection, clearLocalUserData, DEFAULT_USER, saveUserData } from './services/storageService';
-import { MISSIONS, getMissionForDayRandom, getShuffledMissions, adaptMission } from './services/mockData';
+import { MISSIONS, getMissionForDayRandom, getShuffledMissions, getMissionByIdMode, adaptMission } from './services/mockData';
 import { UserProgress, CURRENT_MONTH_THEME, Mission } from './types';
 import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock, Sparkles } from 'lucide-react';
 import { auth, logoutUser, loginWithGoogle } from './services/firebase';
@@ -131,6 +131,24 @@ const SOLO_NEXT_STEP_SUGGESTIONS = [
   'Escreva algo que quer dizer, mas prefere guardar para amanhã.',
 ];
 
+const DISTANCE_NEXT_STEP_SUGGESTIONS = [
+  'Mandem um áudio de 30s sobre o melhor minuto do dia e ouçam juntos em chamada rápida.',
+  'Façam uma videochamada de 5 minutos só para contar um detalhe bom do dia, sem falar de logística.',
+  'Escolham ouvir a mesma música e contem em áudio o que sentiram.',
+  'Troquem uma foto do dia e conversem 3 minutos sobre ela na chamada.',
+  'Combinem um “boa-noite” por áudio descrevendo algo que apreciaram um no outro hoje.',
+  'Marquem 10 minutos amanhã para um café em vídeo, cada um com sua bebida.',
+  'Façam uma respiração guiada 4-4 na chamada por 2 minutos antes de dormir.',
+  'Escolham um emoji-código para mandar ao longo do dia quando precisarem de apoio.',
+  'Troquem um mini-elogio específico por mensagem de voz antes de dormir.',
+  'Assistam a um vídeo curto em paralelo e conversem por 3 minutos sobre o que sentiram.',
+  'Planejem um “encontro remoto” de 15 minutos no fim de semana (jogo, receita, playlist).',
+  'Gravem um áudio dizendo “o que vou precisar de você amanhã” e ouçam juntos.',
+  'Enviem um meme que represente o humor do dia e usem como ponto de partida para conversar.',
+  'Leiam algo em voz alta por mensagem de voz e peçam para o outro fazer o mesmo.',
+  'Façam um brinde com água na chamada e registrem com print para lembrar depois.',
+];
+
 const App = () => {
   const [user, setUser] = useState<UserProgress | null>(null);
   const [currentDay, setCurrentDay] = useState(1);
@@ -149,18 +167,19 @@ const App = () => {
   const [pendingTrialMission, setPendingTrialMission] = useState<{ mission: Mission; day: number } | null>(null);
   const [trialContext, setTrialContext] = useState<'mission' | 'profile'>('mission');
   const [showModeModal, setShowModeModal] = useState(false);
-  const [modeSelection, setModeSelection] = useState<'solo' | 'couple'>('couple');
+  const [modeSelection, setModeSelection] = useState<'solo' | 'couple' | 'distance'>('couple');
   const [modeName, setModeName] = useState('');
   const [modePartnerName, setModePartnerName] = useState('');
   const [missionOrder, setMissionOrder] = useState<number[]>([]);
+  const [modeSwitching, setModeSwitching] = useState(false);
+  const [missionMode, setMissionMode] = useState<'solo' | 'couple' | 'distance'>('couple');
   const shuffleSeed = user?.startDate || new Date().toISOString();
 
   const getMissionForDay = (day: number): Mission | undefined => {
     const missionId = missionOrder[day - 1];
-    const baseMission = missionId ? MISSIONS.find((m) => m.id === missionId) : undefined;
-    const mission = baseMission || getMissionForDayRandom(day, user?.mode || 'couple', shuffleSeed);
-    if (!mission) return undefined;
-    return adaptMission(mission, user?.mode || 'couple');
+    const fromOrder = missionId ? getMissionByIdMode(missionId, missionMode || 'couple') : undefined;
+    if (fromOrder) return fromOrder;
+    return getMissionForDayRandom(day, missionMode || 'couple', shuffleSeed);
   };
   const [highlightReflection, setHighlightReflection] = useState<{ title: string; text: string } | null>(null);
   
@@ -216,6 +235,7 @@ const App = () => {
       setModeSelection(user.mode || 'couple');
       setModeName(user.name || '');
       setModePartnerName(user.partnerName || '');
+      setMissionMode(user.mode || 'couple');
       const seed = `${user.startDate}-${user.email || user.username || user.name || 'guest'}`;
       const hasOrder = Array.isArray(user.missionOrder) && user.missionOrder.length === MISSIONS.length;
       const order = hasOrder ? user.missionOrder! : getShuffledMissions(seed).map((m) => m.id);
@@ -241,7 +261,7 @@ const App = () => {
     const order = missionOrder.length === MISSIONS.length ? missionOrder : getShuffledMissions(seed).map((m) => m.id);
     order.forEach((missionId, idx) => {
       const base = MISSIONS.find((m) => m.id === missionId) || MISSIONS[idx];
-      const missionData = adaptMission(base, user?.mode || 'couple');
+      const missionData = getMissionByIdMode(base.id, missionMode || 'couple') || adaptMission(base, missionMode || 'couple');
       const reflection = getReflectionForMission(base.id);
       if (reflection && reflection.trim().length > 0) {
         if (!best || reflection.length > best.text.length) {
@@ -250,7 +270,7 @@ const App = () => {
       }
     });
     setHighlightReflection(best);
-  }, [todayKey, user, missionOrder]);
+  }, [todayKey, user, missionOrder, missionMode]);
 
   useEffect(() => {
     setTabChanging(true);
@@ -258,9 +278,10 @@ const App = () => {
     return () => clearTimeout(t);
   }, [activeTab]);
 
-  const handleOnboardingComplete = async (name: string, partnerName: string, mode: 'solo' | 'couple') => {
+  const handleOnboardingComplete = async (name: string, partnerName: string, mode: 'solo' | 'couple' | 'distance') => {
       const updated = await updateUserProfile(name, partnerName, mode);
       setUser(updated);
+      setMissionMode(updated.mode || 'couple');
   };
 
   const completeMissionAndHandle = async (mission: Mission, current: UserProgress, dayNumber: number) => {
@@ -302,6 +323,8 @@ const App = () => {
         clearLocalUserData();
         setUser(null);
         setCurrentDay(1);
+        setMissionMode('couple');
+        setModeSelection('couple');
         setActiveTab('mission');
         setShowTrialModal(false);
         setPendingTrialMission(null);
@@ -333,7 +356,7 @@ const App = () => {
   };
   const handleResetProgress = async () => {
       if (!user) return;
-      const confirmed = resetConfirm.trim().toUpperCase() === 'RESET';
+      const confirmed = resetConfirm.trim() === 'RESET';
       if (!confirmed) return;
       const updated = await resetProgress();
       setUser(updated);
@@ -354,7 +377,7 @@ const App = () => {
       return;
     }
     const partnerValue = modeSelection === 'solo' ? (modePartnerName.trim() || 'Minha jornada') : modePartnerName.trim();
-    if (modeSelection === 'couple' && !partnerValue.trim()) {
+    if (modeSelection !== 'solo' && !partnerValue.trim()) {
       alert("Preencha o nome do parceiro(a).");
       return;
     }
@@ -362,6 +385,7 @@ const App = () => {
     setUser(updated);
     setEditName(updated.name);
     setEditPartnerName(updated.partnerName || '');
+    setMissionMode(updated.mode || 'couple');
     setShowModeModal(false);
   };
 
@@ -400,13 +424,56 @@ const App = () => {
     return '';
   };
 
+  const activeMission = useMemo(() => {
+    if (!user) return undefined;
+    return getMissionForDay(currentDay);
+  }, [currentDay, missionOrder, missionMode, shuffleSeed, user]);
+
+  const isCompleted = useMemo(() => {
+    if (!activeMission || !user) return false;
+    return user.completedMissionIds.includes(activeMission.id);
+  }, [activeMission, user]);
+
+  const handleMissionToggleMode = async (nextMode: 'couple' | 'distance') => {
+    if (!user) return;
+    if (missionMode === nextMode) return;
+    const partnerValue = user.partnerName?.trim() || '';
+    if (!partnerValue) {
+      alert("Preencha o nome do parceiro(a) no perfil antes de alternar para casal.");
+      setActiveTab('profile');
+      setShowModeModal(true);
+      return;
+    }
+    setModeSwitching(true);
+    const prevUser = user;
+    const optimistic = { ...user, mode: nextMode };
+    setMissionMode(nextMode);
+    setUser(optimistic);
+    setModeSelection(nextMode);
+    try {
+      const updated = await updateUserProfile(user.name, partnerValue, nextMode);
+      setUser(updated);
+      setModeName(updated.name);
+      setModePartnerName(updated.partnerName || '');
+    } catch (error) {
+      console.error("Erro ao trocar modo pela missão", error);
+      alert("Não foi possível trocar o modo agora. Tente novamente.");
+      setUser(prevUser);
+      setMissionMode(prevUser.mode === 'solo' || prevUser.mode === 'distance' || prevUser.mode === 'couple' ? prevUser.mode : 'couple');
+      const fallbackMode = prevUser.mode === 'solo' || prevUser.mode === 'distance' || prevUser.mode === 'couple' ? prevUser.mode : 'couple';
+      setModeSelection(fallbackMode);
+    } finally {
+      setModeSwitching(false);
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-brand-bg text-brand-primary anim-pulse-soft">
         <HeartPulse />
     </div>;
   }
 
-  const needsOnboarding = user && (!user.mode || (user.mode === 'couple' && (!user.partnerName || user.partnerName === '')));
+  const needsOnboarding = user && (!user.mode || ((user.mode === 'couple' || user.mode === 'distance') && (!user.partnerName || user.partnerName === '')));
 
   if (needsOnboarding) {
       return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -414,11 +481,12 @@ const App = () => {
 
   if (!user) return null;
 
-  const activeMission = getMissionForDay(currentDay);
-  const isCompleted = activeMission ? user.completedMissionIds.includes(activeMission.id) : false;
-
   const renderMissionView = () => {
-    const suggestionList = user.mode === 'solo' ? SOLO_NEXT_STEP_SUGGESTIONS : NEXT_STEP_SUGGESTIONS;
+    const suggestionList = missionMode === 'solo' 
+      ? SOLO_NEXT_STEP_SUGGESTIONS 
+      : missionMode === 'distance'
+        ? DISTANCE_NEXT_STEP_SUGGESTIONS
+        : NEXT_STEP_SUGGESTIONS;
     const shareSuggestion = async () => {
       if (!activeMission) return;
       const suggestion = suggestionList[(currentDay - 1) % suggestionList.length];
@@ -470,14 +538,17 @@ const App = () => {
 
         {activeMission ? (
           <DailyMission 
+            key={`${activeMission.id}-${missionMode}`}
             mission={activeMission} 
             isCompleted={isCompleted} 
             onComplete={handleCompleteMission}
-            mode={user.mode || 'couple'}
+            mode={missionMode || 'couple'}
             dayNumber={currentDay}
             partnerName={user.partnerName || ''}
             initialReflection={getReflectionForMission(activeMission.id)}
             onSaveReflection={handleSaveReflection}
+            onToggleMode={handleMissionToggleMode}
+            modeSwitching={modeSwitching}
           />
         ) : (
           <div className="text-center py-10 bg-white rounded-3xl p-8 shadow-sm">
@@ -493,7 +564,7 @@ const App = () => {
               <p className="text-sm text-brand-text">{suggestionList[(currentDay - 1) % suggestionList.length]}</p>
             </div>
             <Button variant="outline" className="border-brand-primary text-brand-primary hover:bg-brand-primary/10" onClick={shareSuggestion}>
-              {user.mode === 'solo' ? 'Compartilhar (opcional)' : 'Compartilhar com parceiro(a)'}
+              {missionMode === 'solo' ? 'Compartilhar (opcional)' : 'Compartilhar com parceiro(a)'}
             </Button>
           </div>
         )}
@@ -571,7 +642,7 @@ const App = () => {
   const renderHistoryView = () => {
     // Pagination Logic
     const seed = user.startDate || new Date().toISOString();
-    const missionOrder = getShuffledMissions(seed);
+    const missionOrder = getShuffledMissions(seed, missionMode || 'couple');
     const visibleMissions = missionOrder.slice(0, historyPage * ITEMS_PER_PAGE);
     const hasMore = visibleMissions.length < missionOrder.length;
 
@@ -845,7 +916,7 @@ const App = () => {
                   className="text-xs px-3 py-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10"
                   onClick={() => setShowModeModal(true)}
                 >
-                  Trocar Solo/Casal
+                  Trocar modo
                 </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1014,8 +1085,8 @@ const App = () => {
                 placeholder='RESET'
                 className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
               />
-              {resetConfirm && resetConfirm.trim().toUpperCase() !== 'RESET' && (
-                <p className="text-xs text-red-500">Use letras maiúsculas: RESET</p>
+              {resetConfirm && resetConfirm.trim() !== 'RESET' && (
+                <p className="text-xs text-red-500">Use exatamente em maiúsculas: RESET</p>
               )}
             </div>
 
@@ -1027,7 +1098,7 @@ const App = () => {
                 onClick={handleResetProgress}
                 variant="outline"
                 className="border-red-300 text-red-600 hover:bg-red-50"
-                disabled={resetConfirm.trim().toUpperCase() !== 'RESET'}
+                disabled={resetConfirm.trim() !== 'RESET'}
               >
                 Resetar agora
               </Button>
@@ -1122,12 +1193,12 @@ const App = () => {
               </div>
               <div className="flex-1">
                 <p className="text-xs uppercase tracking-[0.2em] text-brand-primary font-semibold">Modo da jornada</p>
-                <h3 className="font-serif text-2xl text-brand-text leading-snug">Escolha solo ou casal</h3>
+                <h3 className="font-serif text-2xl text-brand-text leading-snug">Escolha solo, casal ou distância</h3>
                 <p className="text-sm text-gray-600 mt-2">Você pode ajustar nomes e o formato da jornada a qualquer momento.</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-left">
+            <div className="grid grid-cols-3 gap-2 text-left">
               <button
                 onClick={() => setModeSelection('solo')}
                 className={`p-3 rounded-xl border text-sm ${modeSelection === 'solo' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'}`}
@@ -1142,6 +1213,13 @@ const App = () => {
                 <p className="font-semibold text-brand-text">Casal</p>
                 <p className="text-xs text-gray-500">A dois</p>
               </button>
+              <button
+                onClick={() => setModeSelection('distance')}
+                className={`p-3 rounded-xl border text-sm ${modeSelection === 'distance' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'}`}
+              >
+                <p className="font-semibold text-brand-text">À distância</p>
+                <p className="text-xs text-gray-500">Chamadas e áudios</p>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1151,7 +1229,7 @@ const App = () => {
                 placeholder="Seu nome"
                 className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
               />
-              {modeSelection === 'couple' && (
+              {modeSelection !== 'solo' && (
                 <input
                   value={modePartnerName}
                   onChange={(e) => setModePartnerName(e.target.value)}

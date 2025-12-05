@@ -126,6 +126,59 @@ const SOLO_OVERRIDES: Record<number, MissionOverride> = {
   },
 };
 
+const DISTANCE_OVERRIDES: Record<number, MissionOverride> = {
+  1: {
+    shortDescription: "Respirem juntos pela chamada.",
+    action: "Abram uma videochamada por 2 minutos em silêncio, câmera ligada, olhando para a tela e respirando no mesmo ritmo.",
+    quote: "Mesmo longe, presença é ritmo compartilhado."
+  },
+  2: {
+    shortDescription: "Elogio claro à distância.",
+    action: "Envie um áudio ou vídeo curto dizendo uma coisa específica que admira e por quê. Façam uma chamada para ouvir e reagir juntos."
+  },
+  3: {
+    shortDescription: "Pergunta diferente pela chamada.",
+    action: "Marquem uma chamada rápida e perguntem: “Qual foi o melhor minuto do seu dia e por quê?”. Ouça sem interromper e responda depois.",
+  },
+  4: {
+    shortDescription: "Toque guiado à distância.",
+    action: "Mandem um áudio de 30s guiando um autocuidado (mãos no peito, respiração lenta) e façam juntos na chamada.",
+    title: "Abraço à Distância"
+  },
+  6: {
+    shortDescription: "Alinhe expectativas remotas.",
+    action: "Escolham algo simples para fazer na chamada esta semana (cozinhar juntos em vídeo, café ao vivo, ver o pôr do sol pela câmera)."
+  },
+  8: {
+    shortDescription: "Presença sem toque físico.",
+    action: "Falem por 1 minuto sobre algo bom do dia enquanto mantêm a câmera ligada e descrevem o que fariam de toque se estivessem juntos."
+  },
+  9: {
+    shortDescription: "Veja o esforço mesmo longe.",
+    action: "Note um esforço invisível que o outro fez hoje (trabalho, cuidado, atenção) e envie um áudio agradecendo; depois comentem em chamada como isso impactou você."
+  },
+  10: {
+    shortDescription: "Celebrem via áudio ou vídeo.",
+    action: "Escolham uma vitória da semana e façam um brinde na chamada (água, chá) tirando print ou foto da tela."
+  },
+  14: {
+    shortDescription: "Conte sua lembrança e envie.",
+    action: "Grave um áudio de 60s contando uma lembrança marcante para vocês. Envie e combinem de ouvir juntos na chamada."
+  },
+  21: {
+    shortDescription: "Brinde remoto ao cotidiano.",
+    action: "Marquem uma chamada curta e façam um brinde à mesma hora, cada um com sua bebida, celebrando algo simples de hoje."
+  },
+  22: {
+    shortDescription: "Sincronize a respiração à distância.",
+    action: "Na chamada, façam 2 minutos de respiração 4-4 (inala 4, exala 4) olhando para a câmera e acompanhando o ritmo do outro."
+  },
+  28: {
+    shortDescription: "Nomeiem emoções e troquem áudios.",
+    action: "Cada um escreve uma emoção de hoje e grava um áudio curto dizendo o gatilho. Ouçam na chamada e validem sem aconselhar."
+  },
+};
+
 const LONG_SUFFIXES = [
   ' Termine anotando em uma frase o que quer repetir amanhã.',
   ' Feche escolhendo uma coisa simples para testar amanhã.',
@@ -718,11 +771,19 @@ export const MISSIONS: Mission[] = [
   )
 ].sort((a, b) => a.day - b.day);
 
-const adaptInsight = (text: string, currentMode: 'solo' | 'couple') => {
+const adaptInsight = (text: string, currentMode: 'solo' | 'couple' | 'distance') => {
   let simplified = text
     .replace(/micro-ação/gi, 'ação simples')
     .replace(/paralisa/gi, 'trava')
     .replace(/concreta/gi, 'real');
+  if (currentMode === 'distance') {
+    simplified = simplified
+      .replace(/\babraç(?:o|os)\b/gi, 'gesto à distância')
+      .replace(/\btoque\b/gi, 'presença pela chamada')
+      .replace(/\bmãos dadas\b/gi, 'mãos perto da câmera')
+      .replace(/\bjuntos?\b/gi, 'conectados pela chamada')
+      .replace(/\bperto\b/gi, 'presentes mesmo longe');
+  }
   if (currentMode === 'solo') {
     simplified = simplified
       .replace(/vocês/gi, 'você')
@@ -741,7 +802,22 @@ const adaptInsight = (text: string, currentMode: 'solo' | 'couple') => {
   return simplified;
 };
 
-export const adaptMission = (mission: Mission, mode: 'solo' | 'couple' = 'couple'): Mission => {
+const adaptDistanceText = (text?: string) => {
+  if (!text) return text;
+  return text
+    .replace(/\babr(a|á)ço(s)?\b/gi, 'gesto guiado na chamada')
+    .replace(/\bsegurem as mãos\b/gi, 'abram a câmera e descrevam o toque')
+    .replace(/\bmãos\b/gi, 'mãos perto da câmera')
+    .replace(/\bolhem-se nos olhos\b/gi, 'olhem para a câmera por 2 minutos')
+    .replace(/\bjuntos?\b/gi, 'na chamada')
+    .replace(/\bfaçam\b/gi, 'façam pela chamada')
+    .replace(/\bfaça\b/gi, 'faça pela chamada')
+    .replace(/\btoque\b/gi, 'presença pela voz ou vídeo')
+    .replace(/\babraçar\b/gi, 'guiar um gesto à distância')
+    .replace(/\bcelebrar\b/gi, 'celebrar por áudio ou vídeo');
+};
+
+export const adaptMission = (mission: Mission, mode: 'solo' | 'couple' | 'distance' = 'couple'): Mission => {
   if (mode === 'solo') {
     const override = SOLO_OVERRIDES[mission.id];
     const merged = override ? { ...mission, ...override } : mission;
@@ -749,14 +825,45 @@ export const adaptMission = (mission: Mission, mode: 'solo' | 'couple' = 'couple
     const soloQuote = merged.quote ? adaptInsight(merged.quote, 'solo') : merged.quote;
     return { ...merged, insights: soloInsights, quote: soloQuote };
   }
+  if (mode === 'distance') {
+    const override = DISTANCE_OVERRIDES[mission.id];
+    const merged = override ? { ...mission, ...override } : mission;
+    const distanceActionRaw = adaptDistanceText(merged.action);
+    const distanceShortRaw = adaptDistanceText(merged.shortDescription);
+    const distanceInsights = merged.insights ? merged.insights.map((i) => adaptInsight(i, 'distance')) : merged.insights;
+    const distanceQuote = merged.quote ? adaptInsight(adaptDistanceText(merged.quote), 'distance') : merged.quote;
+
+    // Se não houver override e o texto não mudou, force um toque remoto para diferenciar
+    const actionChanged = (distanceActionRaw || '').trim() !== (mission.action || '').trim();
+    const shortChanged = (distanceShortRaw || '').trim() !== (mission.shortDescription || '').trim();
+    const fallbackSuffix = ' Façam por chamada ou enviem um áudio antes de comentar como se sentiram.';
+    const distanceAction = (distanceActionRaw || merged.action) + (!override && !actionChanged ? fallbackSuffix : '');
+    const distanceShort = (distanceShortRaw || merged.shortDescription) + (!override && !shortChanged ? ' Versão para fazer à distância.' : '');
+
+    return { ...merged, action: distanceAction, shortDescription: distanceShort, insights: distanceInsights, quote: distanceQuote };
+  }
   const coupleInsights = mission.insights ? mission.insights.map((i) => adaptInsight(i, 'couple')) : mission.insights;
   return { ...mission, insights: coupleInsights };
 };
 
-export const getMissionByDay = (day: number, mode: 'solo' | 'couple' = 'couple'): Mission | undefined => {
-  const base = MISSIONS.find(m => m.day === day);
-  if (!base) return undefined;
-  return adaptMission(base, mode);
+const COUPLE_MISSIONS = MISSIONS;
+const SOLO_MISSIONS = MISSIONS.map((m) => adaptMission(m, 'solo'));
+const DISTANCE_MISSIONS = MISSIONS.map((m) => adaptMission(m, 'distance'));
+
+const getModeMissions = (mode: 'solo' | 'couple' | 'distance') => {
+  if (mode === 'solo') return SOLO_MISSIONS;
+  if (mode === 'distance') return DISTANCE_MISSIONS;
+  return COUPLE_MISSIONS;
+};
+
+export const getMissionByIdMode = (id: number, mode: 'solo' | 'couple' | 'distance' = 'couple'): Mission | undefined => {
+  const list = getModeMissions(mode);
+  return list.find((m) => m.id === id);
+};
+
+export const getMissionByDay = (day: number, mode: 'solo' | 'couple' | 'distance' = 'couple'): Mission | undefined => {
+  const list = getModeMissions(mode);
+  return list.find((m) => m.day === day);
 };
 
 const hashString = (input: string): number => {
@@ -777,8 +884,8 @@ const mulberry32 = (a: number) => {
   };
 };
 
-export const getShuffledMissions = (seed: string): Mission[] => {
-  const list = [...MISSIONS];
+export const getShuffledMissions = (seed: string, mode: 'solo' | 'couple' | 'distance' = 'couple'): Mission[] => {
+  const list = [...getModeMissions(mode)];
   const rand = mulberry32(hashString(seed || 'default'));
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -787,9 +894,9 @@ export const getShuffledMissions = (seed: string): Mission[] => {
   return list;
 };
 
-export const getMissionForDayRandom = (day: number, mode: 'solo' | 'couple' = 'couple', seed: string = ''): Mission | undefined => {
-  const shuffled = getShuffledMissions(seed || 'default');
-  const mission = shuffled[day - 1];
-  if (!mission) return undefined;
-  return adaptMission(mission, mode);
+export const getMissionForDayRandom = (day: number, mode: 'solo' | 'couple' | 'distance' = 'couple', seed: string = ''): Mission | undefined => {
+  const shuffled = getShuffledMissions(seed || 'default').map((m) => m.id);
+  const missionId = shuffled[day - 1];
+  if (!missionId) return undefined;
+  return getMissionByIdMode(missionId, mode);
 };
