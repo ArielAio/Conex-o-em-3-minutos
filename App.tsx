@@ -20,6 +20,24 @@ const formatToday = () => {
   return today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 };
 
+const DAY_IN_MS = 1000 * 60 * 60 * 24;
+const getLocalDateKey = (date: Date = new Date()) => {
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, '0');
+  const d = `${date.getDate()}`.padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const getCurrentDayNumber = (startDate: string) => {
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return 1;
+  const today = new Date();
+  const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const diffDays = Math.floor((todayMidnight - startMidnight) / DAY_IN_MS);
+  return Math.min(MISSIONS.length, Math.max(1, diffDays + 1));
+};
+
 const PREMIUM_PREVIEW = {
   theme: 'Missões premium diárias',
   missions: [
@@ -179,7 +197,7 @@ const App = () => {
   const [historyPage, setHistoryPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
   const [tabChanging, setTabChanging] = useState(false);
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getLocalDateKey();
 
   // Helper to load data
   const loadUserData = async () => {
@@ -409,9 +427,9 @@ const App = () => {
   };
 
   const currentDay = useMemo(() => {
-    const completedCount = user?.completedMissionIds?.length || 0;
-    return Math.min(MISSIONS.length, completedCount + 1);
-  }, [user]);
+    if (!user) return 1;
+    return getCurrentDayNumber(user.startDate);
+  }, [todayKey, user]);
 
   const activeMission = useMemo(() => {
     if (!user) return undefined;
