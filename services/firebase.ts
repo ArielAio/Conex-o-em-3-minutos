@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -31,3 +31,20 @@ export const loginWithGoogle = async () => {
 export const logoutUser = async () => {
     await signOut(auth);
 }
+
+export const createAccountWithEmail = async (email: string, password: string, username: string) => {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    if (username) {
+        try {
+            await updateProfile(credential.user, { displayName: username });
+        } catch (error) {
+            console.warn("Não foi possível atualizar o displayName", error);
+        }
+    }
+    return credential.user;
+};
+
+export const loginWithEmail = async (email: string, password: string) => {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    return credential.user;
+};

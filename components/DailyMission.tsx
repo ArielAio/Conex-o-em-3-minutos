@@ -9,6 +9,8 @@ interface DailyMissionProps {
   isCompleted: boolean;
   onComplete: () => void;
   isLocked?: boolean;
+  mode?: 'solo' | 'couple';
+  partnerName?: string;
   initialReflection?: string;
   onSaveReflection?: (missionId: number, text: string) => void | Promise<void>;
 }
@@ -57,9 +59,13 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   isCompleted, 
   onComplete,
   isLocked = false,
+  mode = 'couple',
+  partnerName,
   initialReflection = '',
   onSaveReflection,
 }) => {
+  const isSolo = mode === 'solo';
+  const partnerLabel = !isSolo && partnerName ? partnerName : null;
   const [insight, setInsight] = useState<string | null>(null);
   const [showAction, setShowAction] = useState(isCompleted);
   const [showCompletedDetails, setShowCompletedDetails] = useState(isCompleted);
@@ -128,7 +134,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
       const pick = mission.insights[Math.floor(Math.random() * mission.insights.length)];
       setInsight(pick);
     } else {
-      setInsight('Confiem no processo diário. Pequenas ações somadas constroem segurança.');
+      setInsight(isSolo ? 'Confie no processo diário. Pequenas ações somadas melhoram seu dia.' : 'Confiem no processo diário. Pequenas ações somadas constroem segurança.');
     }
   }
 
@@ -142,8 +148,8 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
     const titleLine = `${isCompleted ? 'Missão concluída' : 'Missão do dia'}: "${mission.title}" (Dia ${mission.day} • ${mission.theme})`;
     const actionLine = `Ação: ${mission.action}`;
     const inviteLine = isCompleted 
-      ? 'Quero compartilhar esse momento com você.'
-      : 'Topa fazer comigo hoje?';
+      ? isSolo ? 'Quero registrar e compartilhar esse momento.' : `Quero compartilhar esse momento com você${partnerLabel ? `, ${partnerLabel}` : ''}.`
+      : isSolo ? 'Vamos cuidar de nós mesmos hoje? Compartilhe com quem pode se inspirar.' : `Topa fazer comigo hoje${partnerLabel ? `, ${partnerLabel}` : ''}?`;
     const insightLine = insight ? `\nInsight que tive: "${insight}"` : '';
     const reflectionLine = reflection ? `\nMinha nota: "${reflection}"` : '';
 
@@ -241,13 +247,15 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
           </div>
           
           <h3 className="font-serif heading-lg mb-2 text-brand-text leading-tight">Missão Cumprida!</h3>
-          <p className="text-gray-500 mb-6 font-light text-fluid">Você fortaleceu seu laço hoje.</p>
+          <p className="text-gray-500 mb-6 font-light text-fluid">
+            {isSolo ? 'Você cuidou de você hoje.' : `Você e${partnerLabel ? ` ${partnerLabel}` : ' seu par'} fortaleceram o laço hoje.`}
+          </p>
 
           <div className="bg-white/80 border border-brand-primary/20 rounded-2xl p-4 shadow-sm mb-6 text-left card-padding">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-brand-text text-sm font-semibold">
                 <Share2 className="w-4 h-4 text-brand-primary" />
-                <span>Compartilhar missão com seu amor</span>
+                <span>{isSolo ? 'Compartilhar missão' : `Compartilhar missão com ${partnerLabel || 'seu amor'}`}</span>
               </div>
               <Button 
                 variant="primary" 
@@ -259,7 +267,9 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 {isSharing ? 'Preparando...' : 'Enviar missão'}
               </Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Ele recebe o link da missão já com a ação do dia.</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {isSolo ? 'Envie o link para se inspirar depois ou convidar alguém.' : 'Ele recebe o link da missão já com a ação do dia.'}
+            </p>
           </div>
           
           <div className="bg-gradient-to-br from-brand-bg to-white p-6 rounded-2xl border border-brand-primary/20 mb-6 text-left shadow-sm card-padding">
@@ -368,10 +378,13 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                  <Clock3 className="w-3 h-3" /> 3 min
                </span>
           </div>
-          <span className="text-brand-primary font-bold text-xs uppercase tracking-widest">Dia {mission.day}</span>
+              <span className="text-brand-primary font-bold text-xs uppercase tracking-widest">Dia {mission.day}</span>
           <h2 className="font-serif heading-lg text-brand-text mt-2 leading-tight">
             {mission.title}
           </h2>
+          {partnerLabel && (
+            <p className="text-xs text-gray-600 mt-1">Para você e {partnerLabel}</p>
+          )}
 
       </div>
 
@@ -388,11 +401,18 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 <p className="text-[clamp(1.05rem,2.6vw,1.3rem)] text-gray-800 font-serif leading-snug">
                 {mission.action}
                 </p>
+                {partnerLabel && (
+                  <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    Combine com {partnerLabel} antes de começar.
+                  </p>
+                )}
             </div>
 
             <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-2 shadow-sm card-padding mb-6">
               <p className="text-xs uppercase text-gray-400 font-bold tracking-[0.2em]">Reflexão em 1 linha</p>
-              <p className="text-xs text-gray-500">O que funcionou hoje? Anote um lembrete curto para vocês do futuro.</p>
+              <p className="text-xs text-gray-500">
+                {isSolo ? 'O que funcionou hoje? Anote um lembrete curto para você do futuro.' : 'O que funcionou hoje? Anote um lembrete curto para vocês do futuro.'}
+              </p>
               <input
                 value={reflection}
                 onChange={(e) => {
@@ -403,7 +423,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                   }
                 }}
                 maxLength={140}
-                placeholder="Ex.: respiramos antes de responder e a conversa ficou leve."
+                placeholder={isSolo ? "Ex.: respirei antes de responder e fiquei mais leve." : "Ex.: respiramos antes de responder e a conversa ficou leve."}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
               />
               <p className="text-[11px] text-gray-400 text-right">{reflection.length}/140</p>
@@ -413,8 +433,12 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
               <div className="flex items-start gap-2">
                 <Share2 className="w-4 h-4 text-brand-primary mt-1" />
                 <div>
-                  <p className="text-sm font-semibold text-brand-text">Compartilhar missão com seu amor</p>
-                  <p className="text-xs text-gray-500">Enviamos o link com a ação do dia para fazerem juntos.</p>
+                  <p className="text-sm font-semibold text-brand-text">
+                    {isSolo ? 'Compartilhar missão (opcional)' : `Compartilhar missão com ${partnerLabel || 'seu amor'}`}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {isSolo ? 'Envie o link com a ação do dia para guardar ou inspirar alguém.' : `Enviamos o link com a ação do dia para vocês fazerem juntos${partnerLabel ? `, ${partnerLabel}` : ''}.`}
+                  </p>
                 </div>
               </div>
               <Button 

@@ -4,11 +4,12 @@ import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
-import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection } from './services/storageService';
+import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection, clearLocalUserData, DEFAULT_USER } from './services/storageService';
 import { getMissionByDay, MISSIONS } from './services/mockData';
 import { UserProgress, CURRENT_MONTH_THEME } from './types';
-import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock } from 'lucide-react';
+import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock, Sparkles } from 'lucide-react';
 import { auth, logoutUser, loginWithGoogle } from './services/firebase';
+import { translateAuthError } from './services/firebaseErrors';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './components/Button';
 
@@ -29,10 +30,14 @@ const formatToday = () => {
   return today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 };
 
-const NEXT_MONTH_PREVIEW = {
-  theme: 'Conflitos sem guerra',
-  missions: ['Pausa antes de responder', 'Regra do relógio', 'Debrief sem culpa'],
-  teaser: 'Mês 2 preparado para transformar conflitos em diálogo seguro.'
+const PREMIUM_PREVIEW = {
+  theme: 'Missões premium diárias',
+  missions: [
+    'Check-in de humor em 2 minutos',
+    'Pergunta coringa do dia',
+    'Ritual rápido de desligar telas'
+  ],
+  teaser: 'Teste premium traz missões novas todos os dias e mensagens que se adaptam ao seu ritmo.'
 };
 
 const getGreeting = () => {
@@ -96,6 +101,36 @@ const NEXT_STEP_SUGGESTIONS = [
   'Escrevam algo que querem dizer, mas preferem guardar para amanhã.',
 ];
 
+const SOLO_NEXT_STEP_SUGGESTIONS = [
+  'Grave um áudio de 30s contando o melhor momento do seu dia — e por que ele importou para você.',
+  'Deixe um bilhete curto para si mesmo elogiando algo específico que fez nas últimas 24h.',
+  'Marque um micro descanso de 15 minutos esta semana só para caminhar sem celular.',
+  'Escreva uma memória recente que te fez sentir mais conectado consigo.',
+  'Faça uma respiração guiada de 1 minuto, focando no seu ritmo.',
+  'Escolha uma foto favorita sua e escreva a história por trás dela.',
+  'Prepare um chá ou café e fique 5 minutos sem tela, apenas degustando.',
+  'Crie uma playlist curta (3 músicas) que representa seu humor hoje.',
+  'Pergunte: “O que vou precisar de mim amanhã?” e anote a resposta.',
+  'Agradeça verbalmente por algo que você fez hoje e quase não percebeu.',
+  'Planeje uma refeição simples só para você e defina o dia.',
+  'Faça uma caminhada curta de 5 minutos prestando atenção no corpo.',
+  'Escreva um “sim/mais”: algo que quer repetir mais vezes.',
+  'Faça um check-in rápido: de 0 a 10, qual seu nível de energia emocional hoje?',
+  'Olhe-se no espelho por 20 segundos e descreva como se sentiu depois.',
+  'Envie para si mesmo uma mensagem programada para amanhã que te faça sorrir.',
+  'Escolha um mini-ritual semanal para testar nos próximos 7 dias.',
+  'Compartilhe num diário um medo ou preocupação em duas frases.',
+  'Relembre um aprendizado recente que te fortaleceu.',
+  'Liste três pequenas vitórias da semana.',
+  'Faça um “turno de fala” em áudio: fale 60s sem interrupções e depois ouça.',
+  'Segure suas próprias mãos por 30 segundos focando na sensação.',
+  'Crie um gesto físico rápido que signifique “estou comigo”.',
+  'Invente um apelido carinhoso provisório para si esta semana.',
+  'Repita amanhã a missão favorita do mês — a escolha é livre.',
+  'Defina uma palavra-curinga para lembrar de respirar quando tudo apertar.',
+  'Escreva algo que quer dizer, mas prefere guardar para amanhã.',
+];
+
 const App = () => {
   const [user, setUser] = useState<UserProgress | null>(null);
   const [currentDay, setCurrentDay] = useState(1);
@@ -108,6 +143,15 @@ const App = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [showNextMonthModal, setShowNextMonthModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showTrialModal, setShowTrialModal] = useState(false);
+  const [trialActivated, setTrialActivated] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
+  const [pendingTrialMissionId, setPendingTrialMissionId] = useState<number | null>(null);
+  const [trialContext, setTrialContext] = useState<'mission' | 'profile'>('mission');
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [modeSelection, setModeSelection] = useState<'solo' | 'couple'>('couple');
+  const [modeName, setModeName] = useState('');
+  const [modePartnerName, setModePartnerName] = useState('');
   const [highlightReflection, setHighlightReflection] = useState<{ title: string; text: string } | null>(null);
   
   // Pagination state for history to prevent heavy rendering
@@ -129,6 +173,9 @@ const App = () => {
       console.error("Erro carregando dados do usuário, usando visitante", error);
       const fallback: UserProgress = {
         name: 'Visitante',
+        username: 'visitante',
+        email: '',
+        mode: 'couple',
         partnerName: '',
         startDate: new Date().toISOString(),
         completedMissionIds: [],
@@ -156,17 +203,27 @@ const App = () => {
     if (user) {
       setEditName(user.name || '');
       setEditPartnerName(user.partnerName || '');
+      setModeSelection(user.mode || 'couple');
+      setModeName(user.name || '');
+      setModePartnerName(user.partnerName || '');
     }
   }, [user]);
+
+  useEffect(() => {
+    if (modeSelection === 'solo' && !modePartnerName) {
+      setModePartnerName('Minha jornada');
+    }
+  }, [modeSelection]);
 
   useEffect(() => {
     // highlight reflexão mais longa usando dados persistidos
     let best: { title: string; text: string } | null = null;
     MISSIONS.forEach((mission) => {
+      const missionData = getMissionByDay(mission.day, user?.mode || 'couple') || mission;
       const reflection = getReflectionForMission(mission.id);
       if (reflection && reflection.trim().length > 0) {
         if (!best || reflection.length > best.text.length) {
-          best = { title: mission.title, text: reflection.trim() };
+          best = { title: missionData.title, text: reflection.trim() };
         }
       }
     });
@@ -179,46 +236,79 @@ const App = () => {
     return () => clearTimeout(t);
   }, [activeTab]);
 
-  const handleOnboardingComplete = async (name: string, partnerName: string) => {
-      const updated = await updateUserProfile(name, partnerName);
+  const handleOnboardingComplete = async (name: string, partnerName: string, mode: 'solo' | 'couple') => {
+      const updated = await updateUserProfile(name, partnerName, mode);
       setUser(updated);
+  };
+
+  const completeMissionAndHandle = async (missionId: number, current: UserProgress) => {
+    const mission = MISSIONS.find((m) => m.id === missionId);
+    if (!mission) return;
+    const updatedUser = await completeMission(mission.id, current);
+    setUser(updatedUser);
+    if (updatedUser.isPremium && mission.day === 30) {
+      setShowNextMonthModal(true);
+    }
   };
 
   const handleCompleteMission = async () => {
     if (!user) return;
-    const activeMission = getMissionByDay(currentDay);
-    if (activeMission) {
-      const updatedUser = await completeMission(activeMission.id, user);
-      setUser(updatedUser);
-      if (activeMission.day === 30) {
-        setShowNextMonthModal(true);
-      }
+    const activeMission = getMissionByDay(currentDay, user.mode || 'couple');
+    if (!activeMission) return;
+
+    if (!user.isPremium) {
+      setPendingTrialMissionId(activeMission.id);
+      setTrialActivated(false);
+      setTrialContext('mission');
+      setShowTrialModal(true);
+      return;
     }
+
+    await completeMissionAndHandle(activeMission.id, user);
   };
 
-  const handleSubscribe = async () => {
-      const updated = await upgradeUser();
-      setUser(updated);
-      alert("Bem-vindo ao Premium! O próximo mês foi desbloqueado.");
+  const handleSubscribe = () => {
+      setPendingTrialMissionId(null);
+      setTrialContext('profile');
+      setTrialActivated(false);
+      setShowTrialModal(true);
   };
 
   const handleLogout = async () => {
-      await logoutUser();
+      setLoading(true);
+      try {
+        await logoutUser();
+      } finally {
+        clearLocalUserData();
+        setUser(null);
+        setCurrentDay(1);
+        setActiveTab('mission');
+        setShowTrialModal(false);
+        setPendingTrialMissionId(null);
+        setTrialActivated(false);
+        setTrialLoading(false);
+        setShowModeModal(false);
+        await loadUserData();
+        setLoading(false);
+      }
   }
   const handleLogin = async () => {
       try {
         await loginWithGoogle();
       } catch (error: any) {
         console.error("Erro ao conectar com Google", error);
-        alert("Não foi possível conectar. Tente novamente.");
+        const translated = translateAuthError(error, 'conectar com Google');
+        alert(`${translated.title}: ${translated.detail}`);
       }
   };
   const handleSaveProfile = async () => {
-      if (!editName.trim() || !editPartnerName.trim()) {
-        alert("Preencha nome e nome do parceiro.");
+      const isSolo = user?.mode === 'solo';
+      if (!editName.trim() || (!isSolo && !editPartnerName.trim())) {
+        alert(isSolo ? "Preencha seu nome." : "Preencha nome e nome do parceiro.");
         return;
       }
-      const updated = await updateUserProfile(editName.trim(), editPartnerName.trim());
+      const partnerValue = isSolo ? (editPartnerName.trim() || 'Minha jornada') : editPartnerName.trim();
+      const updated = await updateUserProfile(editName.trim(), partnerValue, user?.mode || 'couple');
       setUser(updated);
   };
   const handleResetProgress = async () => {
@@ -236,6 +326,43 @@ const App = () => {
 
   const handleCancelSubscription = () => {
     setShowCancelModal(true);
+  };
+
+  const handleSaveMode = async () => {
+    if (!modeName.trim()) {
+      alert("Preencha seu nome.");
+      return;
+    }
+    const partnerValue = modeSelection === 'solo' ? (modePartnerName.trim() || 'Minha jornada') : modePartnerName.trim();
+    if (modeSelection === 'couple' && !partnerValue.trim()) {
+      alert("Preencha o nome do parceiro(a).");
+      return;
+    }
+    const updated = await updateUserProfile(modeName.trim(), partnerValue, modeSelection);
+    setUser(updated);
+    setEditName(updated.name);
+    setEditPartnerName(updated.partnerName || '');
+    setShowModeModal(false);
+  };
+
+  const handleStartTrial = async () => {
+    if (!user) return;
+    setTrialLoading(true);
+    try {
+      const upgraded = await upgradeUser();
+      setUser(upgraded);
+      setTrialActivated(true);
+      if (pendingTrialMissionId !== null) {
+        await completeMissionAndHandle(pendingTrialMissionId, upgraded);
+      }
+      setPendingTrialMissionId(null);
+      setShowTrialModal(false);
+    } catch (error) {
+      console.error("Erro ao ativar teste", error);
+      alert("Não foi possível ativar o teste agora. Tente novamente.");
+    } finally {
+      setTrialLoading(false);
+    }
   };
 
   const handleSaveReflection = async (missionId: number, text: string) => {
@@ -259,7 +386,7 @@ const App = () => {
     </div>;
   }
 
-  const needsOnboarding = user && (!user.partnerName || user.partnerName === '');
+  const needsOnboarding = user && (!user.mode || (user.mode === 'couple' && (!user.partnerName || user.partnerName === '')));
 
   if (needsOnboarding) {
       return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -267,13 +394,14 @@ const App = () => {
 
   if (!user) return null;
 
-  const activeMission = getMissionByDay(currentDay);
+  const activeMission = getMissionByDay(currentDay, user.mode || 'couple');
   const isCompleted = activeMission ? user.completedMissionIds.includes(activeMission.id) : false;
 
   const renderMissionView = () => {
+    const suggestionList = user.mode === 'solo' ? SOLO_NEXT_STEP_SUGGESTIONS : NEXT_STEP_SUGGESTIONS;
     const shareSuggestion = async () => {
       if (!activeMission) return;
-      const suggestion = NEXT_STEP_SUGGESTIONS[activeMission.day % NEXT_STEP_SUGGESTIONS.length];
+      const suggestion = suggestionList[activeMission.day % suggestionList.length];
       const text = `Acabei "${activeMission.title}" (Dia ${activeMission.day}) no Conexão em 3 Minutos. Próximo passo sugerido: ${suggestion}`;
       try {
         await navigator.share({ title: 'Próximo passo', text });
@@ -298,7 +426,7 @@ const App = () => {
             <div className="flex items-center gap-2 mt-3 w-full">
               {Array.from({ length: 7 }).map((_, idx) => {
                 const dayNumber = Math.max(1, currentDay - 6) + idx;
-                const mission = getMissionByDay(dayNumber);
+                const mission = getMissionByDay(dayNumber, user.mode || 'couple');
                 const done = mission ? user.completedMissionIds.includes(mission.id) : false;
                 const isToday = dayNumber === currentDay;
                 const isFuture = dayNumber > currentDay;
@@ -325,12 +453,14 @@ const App = () => {
             mission={activeMission} 
             isCompleted={isCompleted} 
             onComplete={handleCompleteMission}
+            mode={user.mode || 'couple'}
+            partnerName={user.partnerName || ''}
             initialReflection={getReflectionForMission(activeMission.id)}
             onSaveReflection={handleSaveReflection}
           />
         ) : (
           <div className="text-center py-10 bg-white rounded-3xl p-8 shadow-sm">
-             <h2 className="font-serif text-2xl text-brand-primary">Mês Concluído!</h2>
+             <h2 className="font-serif text-2xl text-brand-primary">Ciclo Concluído!</h2>
              <p className="text-gray-500 mt-2">Você completou o ciclo de {CURRENT_MONTH_THEME}.</p>
           </div>
         )}
@@ -339,10 +469,10 @@ const App = () => {
           <div className="bg-gradient-to-r from-brand-primary/10 to-brand-secondary/10 border border-brand-primary/20 rounded-2xl p-4 shadow-sm card-padding flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Próximo passo sugerido</p>
-              <p className="text-sm text-brand-text">{NEXT_STEP_SUGGESTIONS[activeMission.day % NEXT_STEP_SUGGESTIONS.length]}</p>
+              <p className="text-sm text-brand-text">{suggestionList[activeMission.day % suggestionList.length]}</p>
             </div>
             <Button variant="outline" className="border-brand-primary text-brand-primary hover:bg-brand-primary/10" onClick={shareSuggestion}>
-              Compartilhar com parceiro(a)
+              {user.mode === 'solo' ? 'Compartilhar (opcional)' : 'Compartilhar com parceiro(a)'}
             </Button>
           </div>
         )}
@@ -372,23 +502,47 @@ const App = () => {
           </div>
         </div>
 
-        <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-5 shadow-sm card-padding">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Próximo mês</p>
-            <span className="text-[11px] text-gray-500">Teste 7 dias • sem fidelidade</span>
+        {!user.isPremium && (
+        <div className="bg-gradient-to-br from-brand-primary/10 via-white to-brand-secondary/10 border border-brand-primary/20 rounded-2xl p-5 sm:p-6 shadow-sm card-padding card-float soft-hover">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+            <div>
+              <p className="text-[11px] uppercase text-brand-primary font-bold tracking-[0.2em]">Conteúdo premium diário</p>
+              <h3 className="font-serif text-xl text-brand-text leading-tight mt-1">Teste 7 dias sem cartão</h3>
+              <p className="text-sm text-gray-600 mt-1 max-w-2xl">
+                Ative o teste para receber missões novas todos os dias, mensagens que se adaptam ao seu ritmo e PDF com suas reflexões.
+              </p>
+            </div>
+            <span className="text-[11px] text-gray-500 whitespace-nowrap">Cancelamento fácil</span>
           </div>
-          <p className="font-serif text-lg text-brand-text">{NEXT_MONTH_PREVIEW.theme}</p>
-          <p className="text-sm text-gray-600">{NEXT_MONTH_PREVIEW.teaser}</p>
-          <div className="mt-3 space-y-2">
-            {NEXT_MONTH_PREVIEW.missions.map((m, i) => (
-              <div key={m} className="flex items-center gap-2 text-sm text-brand-text">
-                <Lock className="w-4 h-4 text-gray-400" />
-                <span className="font-semibold">Missão {i + 1} •</span>
-                <span className="text-gray-600">“{m}” (bloqueada até assinar)</span>
+
+          <div className="grid sm:grid-cols-2 gap-3 mt-2">
+            {PREMIUM_PREVIEW.missions.map((m, i) => (
+              <div key={m} className="flex items-start gap-3 text-sm text-brand-text bg-white/80 border border-gray-100 rounded-xl p-3 shadow-[0_4px_18px_rgba(0,0,0,0.04)]">
+                <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+                  <Lock className="w-4 h-4 text-brand-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold">Roteiro {i + 1}</p>
+                  <p className="font-semibold">{m}</p>
+                  <p className="text-xs text-gray-500">Liberado durante o teste • adaptação diária</p>
+                </div>
               </div>
             ))}
           </div>
+
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
+            <p className="max-w-xl">Inclui rituais extras semanais, histórico ilimitado e exportação em PDF com suas notas.</p>
+            {!user.isPremium && (
+              <Button 
+                onClick={handleSubscribe} 
+                className="w-full sm:w-auto bg-brand-text text-white hover:bg-black px-5"
+              >
+                Ativar teste premium
+              </Button>
+            )}
+          </div>
         </div>
+        )}
     </div>
   );
   }
@@ -407,6 +561,7 @@ const App = () => {
 
             <div className="space-y-0">
                 {visibleMissions.map((mission, index) => {
+                    const missionData = getMissionByDay(mission.day, user.mode || 'couple') || mission;
                     const isDone = user.completedMissionIds.includes(mission.id);
                     const isLocked = !isDone && mission.day > currentDay;
                     const isFuture = mission.day > currentDay;
@@ -445,14 +600,14 @@ const App = () => {
                                 
                                 <div className="flex items-center gap-2">
                                     <h4 className={`font-serif text-base sm:text-lg leading-snug ${isDone ? 'text-brand-text' : 'text-gray-400'}`}>
-                                        {isFuture && !isDone ? "???" : mission.title}
+                                        {isFuture && !isDone ? "???" : missionData.title}
                                     </h4>
                                     {isStreak && (
                                         <Flame className="w-4 h-4 text-amber-500 fill-amber-500/20 animate-pulse" />
                                     )}
                                 </div>
 
-                                {isDone && <p className="text-sm text-gray-500 mt-1 line-clamp-1">{mission.action}</p>}
+                                {isDone && <p className="text-sm text-gray-500 mt-1 line-clamp-1">{missionData.action}</p>}
                                 {isDone && reflection.trim() && (
                                   <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
                                     Reflexão: {reflection.trim()}
@@ -584,8 +739,8 @@ const App = () => {
                 <div className="flex items-start gap-2">
                   <Check className="w-4 h-4 text-green-500" />
                   <div>
-                    <p className="font-semibold">Mês 2: Conflitos sem guerra</p>
-                    <p className="text-xs text-gray-500">Missões bloqueadas liberadas automaticamente.</p>
+                    <p className="font-semibold">Missões premium diárias</p>
+                    <p className="text-xs text-gray-500">Novos roteiros liberados durante o teste e assinatura.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
@@ -660,6 +815,15 @@ const App = () => {
 
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3 card-padding soft-hover transition-all duration-300">
               <h3 className="font-semibold text-sm text-brand-text">Editar informações</h3>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline"
+                  className="text-xs px-3 py-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10"
+                  onClick={() => setShowModeModal(true)}
+                >
+                  Trocar Solo/Casal
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input 
                     value={editName}
@@ -679,7 +843,7 @@ const App = () => {
                     onClick={handleSaveProfile} 
                     variant="primary" 
                     className="px-4 py-2 text-sm"
-                    disabled={!editName.trim() || !editPartnerName.trim()}
+                    disabled={!editName.trim() || (user?.mode !== 'solo' && !editPartnerName.trim())}
                   >
                     Salvar
                   </Button>
@@ -733,6 +897,78 @@ const App = () => {
         </div>
       </Layout>
 
+      {showTrialModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-7 space-y-5 border border-brand-primary/20 card-padding">
+              <div className="flex items-start gap-3">
+                <div className="bg-brand-primary/15 text-brand-primary p-3 rounded-2xl">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.2em] text-brand-primary font-semibold">Ative para liberar</p>
+                <h3 className="font-serif text-2xl text-brand-text leading-snug">
+                  {trialContext === 'mission' ? 'Liberar teste de 7 dias e finalizar a missão' : 'Ative o teste de 7 dias para liberar o premium'}
+                </h3>
+                <p className="text-sm text-gray-600 mt-2">
+                  {trialContext === 'mission'
+                    ? 'Para concluir a missão e seguir recebendo novas, ative o teste premium gratuito (sem cartão). Cancelamento fácil.'
+                    : 'Ative o teste premium gratuito (sem cartão) para liberar missões extras diárias, PDF e rituais.'}
+                </p>
+                </div>
+              </div>
+
+            <div className="grid sm:grid-cols-2 gap-3 text-sm text-brand-text">
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-500 mt-0.5" />
+                <span>Sem cartão, cancelamento fácil a qualquer momento.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-500 mt-0.5" />
+                <span>Conteúdo premium liberado durante o teste de 7 dias.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-500 mt-0.5" />
+                <span>PDF premium com reflexões e estatísticas.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-500 mt-0.5" />
+                <span>Selos e histórico ilimitado desbloqueados.</span>
+              </div>
+            </div>
+
+            {trialContext === 'mission' && (
+              <p className="text-xs text-gray-500">
+                Se continuar no gratuito, a missão permanece aberta até você ativar o teste.
+              </p>
+            )}
+
+            {trialActivated && (
+              <div className="bg-green-50 border border-green-100 text-green-700 text-sm rounded-xl p-3">
+                Teste ativado! Aproveite os próximos 7 dias para sentir o premium.
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+              <Button 
+                variant="ghost" 
+                className="w-full sm:w-auto" 
+                onClick={() => { setShowTrialModal(false); setPendingTrialMissionId(null); }}
+                disabled={trialLoading}
+              >
+                Continuar no gratuito
+              </Button>
+              <Button 
+                className="w-full sm:w-auto bg-brand-text text-white hover:bg-black"
+                onClick={handleStartTrial}
+                disabled={trialLoading}
+              >
+                {trialLoading ? 'Ativando...' : trialContext === 'mission' ? 'Ativar teste e concluir' : 'Ativar teste grátis'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showResetModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-red-100">
@@ -785,19 +1021,19 @@ const App = () => {
               </div>
               <div className="flex-1">
                 <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Parabéns, ciclo fechado</p>
-                <h3 className="font-serif text-2xl text-brand-text leading-snug">Prontos para o próximo mês?</h3>
-                <p className="text-sm text-gray-600 mt-2">{NEXT_MONTH_PREVIEW.teaser}</p>
+                <h3 className="font-serif text-2xl text-brand-text leading-snug">Continue com missões premium diárias</h3>
+                <p className="text-sm text-gray-600 mt-2">{PREMIUM_PREVIEW.teaser}</p>
               </div>
             </div>
 
             <div className="bg-brand-bg border border-gray-100 rounded-2xl p-4 space-y-3">
-              <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Mês 2 • {NEXT_MONTH_PREVIEW.theme}</p>
+              <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Conteúdo premium • {PREMIUM_PREVIEW.theme}</p>
               <div className="space-y-2">
-                {NEXT_MONTH_PREVIEW.missions.map((m, i) => (
+                {PREMIUM_PREVIEW.missions.map((m, i) => (
                   <div key={m} className="flex items-center gap-2 text-sm text-brand-text">
                     <Lock className="w-4 h-4 text-gray-400" />
-                    <span className="font-semibold">Missão {i + 1} •</span>
-                    <span className="text-gray-600">“{m}” (bloqueada até assinar)</span>
+                    <span className="font-semibold">Roteiro premium {i + 1} •</span>
+                    <span className="text-gray-600">“{m}” (liberado ao assinar)</span>
                   </div>
                 ))}
               </div>
@@ -847,6 +1083,64 @@ const App = () => {
                 }}
               >
                 Confirmar cancelamento
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showModeModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-5 border border-brand-primary/20 card-padding">
+            <div className="flex items-start gap-3">
+              <div className="bg-brand-primary/15 text-brand-primary p-3 rounded-2xl">
+                <UserIcon className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.2em] text-brand-primary font-semibold">Modo da jornada</p>
+                <h3 className="font-serif text-2xl text-brand-text leading-snug">Escolha solo ou casal</h3>
+                <p className="text-sm text-gray-600 mt-2">Você pode ajustar nomes e o formato da jornada a qualquer momento.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-left">
+              <button
+                onClick={() => setModeSelection('solo')}
+                className={`p-3 rounded-xl border text-sm ${modeSelection === 'solo' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'}`}
+              >
+                <p className="font-semibold text-brand-text">Solo</p>
+                <p className="text-xs text-gray-500">Autocuidado</p>
+              </button>
+              <button
+                onClick={() => setModeSelection('couple')}
+                className={`p-3 rounded-xl border text-sm ${modeSelection === 'couple' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'}`}
+              >
+                <p className="font-semibold text-brand-text">Casal</p>
+                <p className="text-xs text-gray-500">A dois</p>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                value={modeName}
+                onChange={(e) => setModeName(e.target.value)}
+                placeholder="Seu nome"
+                className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+              />
+              {modeSelection === 'couple' && (
+                <input
+                  value={modePartnerName}
+                  onChange={(e) => setModePartnerName(e.target.value)}
+                  placeholder="Nome do parceiro(a)"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setShowModeModal(false)}>Cancelar</Button>
+              <Button onClick={handleSaveMode} className="bg-brand-text text-white hover:bg-black">
+                Salvar modo
               </Button>
             </div>
           </div>

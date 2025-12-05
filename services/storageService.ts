@@ -1,19 +1,15 @@
 import { UserProgress } from '../types';
 import { auth, db } from './firebase';
+import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const STORAGE_KEY = 'conexao_3min_user_v1';
 let FIRESTORE_AVAILABLE = true;
-
-const disableFirestore = (reason: any) => {
-  if (FIRESTORE_AVAILABLE) {
-    console.warn('Firestore indisponível, usando apenas armazenamento local.', reason);
-  }
-  FIRESTORE_AVAILABLE = false;
-};
-
-const DEFAULT_USER: UserProgress = {
+export const DEFAULT_USER: UserProgress = {
   name: 'Visitante',
+  username: '',
+  email: '',
+  mode: 'couple',
   startDate: new Date().toISOString(),
   completedMissionIds: [],
   isPremium: false,
@@ -21,6 +17,13 @@ const DEFAULT_USER: UserProgress = {
   lastLoginDate: new Date().toISOString(),
   reflections: {},
   partnerName: '',
+};
+
+const disableFirestore = (reason: any) => {
+  if (FIRESTORE_AVAILABLE) {
+    console.warn('Firestore indisponível, usando apenas armazenamento local.', reason);
+  }
+  FIRESTORE_AVAILABLE = false;
 };
 
 const sanitizeReflections = (raw: any): Record<number, string> => {
@@ -37,7 +40,10 @@ const sanitizeReflections = (raw: any): Record<number, string> => {
 const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
   return {
     name: data.name || 'Visitante',
+    username: data.username || '',
+    email: data.email || '',
     partnerName: data.partnerName || '',
+    mode: data.mode === 'solo' || data.mode === 'couple' ? data.mode : 'couple',
     startDate: data.startDate || new Date().toISOString(),
     completedMissionIds: Array.isArray(data.completedMissionIds) ? data.completedMissionIds : [],
     isPremium: data.isPremium || false,
@@ -61,6 +67,11 @@ const getLocalData = (): UserProgress => {
 const saveLocalData = (data: UserProgress) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ensureDefaults(data)));
 }
+
+export const clearLocalUserData = (): UserProgress => {
+  localStorage.removeItem(STORAGE_KEY);
+  return { ...DEFAULT_USER };
+};
 
 const withTimeout = async <T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
   let timeoutId: any;
@@ -90,6 +101,9 @@ export const getUserData = async (): Promise<UserProgress> => {
                 const initialData: UserProgress = {
                     ...local,
                     name: local.name !== 'Visitante' ? local.name : (user.displayName || 'Usuário'),
+                    username: local.username || user.displayName || '',
+                    email: user.email || local.email || '',
+                    mode: local.mode || 'couple',
                 };
                 
                 return setDoc(docRef, initialData).then(() => initialData);
@@ -104,7 +118,10 @@ export const getUserData = async (): Promise<UserProgress> => {
         };
         const merged: UserProgress = {
           name: local.name !== 'Visitante' ? local.name : remote.name,
+          username: local.username || remote.username || user?.displayName || '',
+          email: local.email || remote.email || user?.email || '',
           partnerName: local.partnerName || remote.partnerName || '',
+          mode: local.mode || remote.mode || 'couple',
           startDate: local.startDate || remote.startDate,
           completedMissionIds: Array.from(new Set([...(remote.completedMissionIds || []), ...(local.completedMissionIds || [])])),
           isPremium: local.isPremium || remote.isPremium,
@@ -165,12 +182,24 @@ export const saveReflection = async (missionId: number, text: string, current?: 
   return user;
 };
 
-export const updateUserProfile = async (name: string, partnerName: string): Promise<UserProgress> => {
+export const updateUserProfile = async (name: string, partnerName: string, mode?: 'solo' | 'couple'): Promise<UserProgress> => {
   const user = getLocalData();
   user.name = name;
   user.partnerName = partnerName;
+  user.username = user.username || name;
+  user.email = user.email || auth.currentUser?.email || '';
+  if (mode === 'solo' || mode === 'couple') {
+    user.mode = mode;
+  }
   user.startDate = user.startDate || new Date().toISOString();
   await saveUserData(user);
+  if (auth.currentUser) {
+    try {
+      await updateProfile(auth.currentUser, { displayName: name });
+    } catch (error) {
+      console.warn("Não foi possível atualizar o perfil no Firebase", error);
+    }
+  }
   return user;
 };
 

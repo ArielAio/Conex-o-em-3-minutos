@@ -9,14 +9,14 @@ const sellingPoints = [
   { title: 'Missão diária guiada', desc: '3 minutos por dia para quebrar a rotina automática e abrir conversa de verdade.' },
   { title: 'Envio por e-mail', desc: 'Receba a missão às 07h para criar hábito e não depender da memória.' },
   { title: 'PDF do mês', desc: 'Transforme as conquistas em um presente digital que fica para sempre.' },
-  { title: 'Assinatura leve', desc: 'R$ 9,90 para destravar o próximo mês e manter o progresso correndo.' },
+  { title: 'Assinatura leve', desc: 'R$ 9,90 para liberar missões premium diárias e manter o progresso correndo.' },
 ];
 
 const steps = [
   { icon: Heart, title: 'Dia Zero imediato', desc: 'Crie a conta e já recebe a primeira missão que gera conexão real.' },
   { icon: Mail, title: 'Gatilho diário', desc: 'Às 07h chega o e-mail lembrando que a relação é prioridade, não obrigação.' },
   { icon: Flame, title: 'Marca como concluída', desc: 'Um clique para registrar, ganhar streak e desbloquear insights.' },
-  { icon: FileText, title: 'Fecha o mês', desc: 'Exporta o PDF, celebra e decide continuar para o Mês 2.' },
+  { icon: FileText, title: 'Fecha o ciclo', desc: 'Exporta o PDF, celebra e segue com missões premium diárias.' },
 ];
 
 const bonuses = [
@@ -26,10 +26,10 @@ const bonuses = [
   { icon: Star, label: 'Rituais extras no plano premium', accent: 'Premium' },
 ];
 
-const nextTheme = {
-  title: 'Mês 2: Conflitos sem guerra',
-  teaser: 'Estratégias práticas para discordar sem machucar e retomar o carinho rápido.',
-  missions: ['Pausa antes de responder', 'Regra do relógio', 'Debrief sem culpa'],
+const premiumPreview = {
+  title: 'Conteúdo premium diário',
+  teaser: 'Missões novas todos os dias, com mensagens que podem ser personalizadas depois do seu teste.',
+  missions: ['Pausa antes de responder', 'Check-in honesto de 3 perguntas', 'Debrief sem culpa'],
 };
 
 const testimonials = [
@@ -59,7 +59,7 @@ const faqs = [
   { q: 'Por que 3 minutos por dia funcionam?', a: 'Porque é curto o bastante para caber em qualquer rotina e longo o suficiente para abrir espaço emocional diário. A constância pesa mais que a intensidade.' },
   { q: 'Preciso estar em um relacionamento?', a: 'Não. O painel funciona para quem quer melhorar a relação consigo ou se preparar para um relacionamento mais saudável.' },
   { q: 'E se eu esquecer de entrar?', a: 'O e-mail diário traz a missão com link direto. Você recebe, clica e conclui em menos de 3 minutos.' },
-  { q: 'O que ganho ao assinar?', a: 'Desbloqueia o próximo mês automaticamente, rituais semanais extras, PDF premium e histórico ilimitado. Sem travar o progresso.' },
+  { q: 'O que ganho ao assinar?', a: 'Libera missões premium diárias, rituais semanais extras, PDF premium e histórico ilimitado. Sem travar o progresso.' },
 ];
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
@@ -234,15 +234,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </section>
 
         <section className="relative bg-brand-primary/8 border border-brand-primary/20 rounded-3xl p-8 space-y-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Próximo mês liberado no premium</p>
-          <h2 className="font-serif text-2xl sm:text-3xl text-brand-text">{nextTheme.title}</h2>
-          <p className="text-gray-600 max-w-2xl">{nextTheme.teaser}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Conteúdo premium diário</p>
+          <h2 className="font-serif text-2xl sm:text-3xl text-brand-text">{premiumPreview.title}</h2>
+          <p className="text-gray-600 max-w-2xl">{premiumPreview.teaser}</p>
           <div className="grid sm:grid-cols-3 gap-3 mt-3">
-            {nextTheme.missions.map((m, i) => (
+            {premiumPreview.missions.map((m, i) => (
               <div key={m} className="p-4 rounded-2xl bg-white border border-gray-100 flex items-center gap-2">
                 <Lock className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold">Missão {i + 1}</p>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Roteiro {i + 1}</p>
                   <p className="text-sm text-brand-text font-semibold">“{m}”</p>
                 </div>
               </div>
@@ -254,7 +254,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               onClick={onStart}
               className="inline-flex items-center justify-center gap-2 bg-brand-text text-white px-6 py-3 rounded-full font-semibold hover:translate-y-[-1px] transition-transform duration-200 shadow-lg shadow-brand-primary/30"
             >
-              Desbloquear mês 2
+              Desbloquear premium
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -316,9 +316,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <span className="text-4xl font-bold">R$ 9,90</span>
               <span className="text-sm text-white/80 mb-1">/ mês</span>
             </div>
-            <p className="text-white/90">Libere o próximo mês automaticamente, ganhe PDF premium, rituais exclusivos e histórico ilimitado.</p>
+            <p className="text-white/90">Libere missões premium diárias automaticamente, ganhe PDF premium, rituais exclusivos e histórico ilimitado.</p>
             <div className="space-y-2">
-              {['Próximo mês destravado sem esforço', 'PDF premium com registros e insights', 'Rituais semanais exclusivos', 'Sem fidelidade: cancele quando quiser'].map((item) => (
+              {['Conteúdo premium liberado sem esforço', 'PDF premium com registros e insights', 'Rituais semanais exclusivos', 'Sem fidelidade: cancele quando quiser'].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-sm">
                   <Check className="w-4 h-4 text-brand-primary" />
                   <span>{item}</span>
@@ -350,7 +350,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             {[
               { title: 'Valor diário', desc: 'Entregue algo pequeno todos os dias e o usuário sente falta quando não recebe.' },
               { title: 'Hábito emocional', desc: 'Streak e barra de progresso criam comprometimento com o próprio casal.' },
-              { title: 'Oferta natural', desc: 'Ao terminar o mês, o botão “Prontos para o Mês 2?” já está lá.' },
+              { title: 'Oferta natural', desc: 'Ao terminar o ciclo, o botão de upgrade já está lá para continuar com premium diário.' },
             ].map((item) => (
               <div key={item.title} className="p-4 rounded-2xl bg-brand-bg/80 border border-gray-100">
                 <p className="font-semibold text-brand-text mb-1">{item.title}</p>

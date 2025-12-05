@@ -1,9 +1,135 @@
 import { Mission, Theme } from '../types';
 
+type MissionOverride = Partial<Pick<Mission, 'action' | 'shortDescription' | 'title' | 'quote'>>;
+
+const SOLO_OVERRIDES: Record<number, MissionOverride> = {
+  1: {
+    shortDescription: "Reconecte-se consigo em silêncio.",
+    action: "Sente-se diante do espelho, olhe nos seus olhos por 2 minutos sem falar e respire fundo percebendo o corpo.",
+    quote: "O silêncio interno é a linguagem do autocuidado."
+  },
+  2: {
+    shortDescription: "Apreciação clara de si.",
+    action: "Escreva hoje uma coisa específica que admira em você e por quê. Seja concreto, não genérico."
+  },
+  3: {
+    shortDescription: "Troque o automático por curiosidade interna.",
+    action: "Responda: “Qual foi o melhor minuto do seu dia e por quê?” e escreva sem julgar, apenas observando."
+  },
+  4: {
+    shortDescription: "Toque que acalma você.",
+    action: "Faça um autoabraço de 20 segundos. Relaxe ombros e respire sentindo o peso do corpo."
+  },
+  5: {
+    shortDescription: "Feche o dia com apreço próprio.",
+    action: "Antes de dormir, agradeça por algo que você fez ou suportou hoje. Registre em uma frase."
+  },
+  6: {
+    shortDescription: "Alinhe expectativas consigo.",
+    action: "Escolha uma coisa simples para fazer esta semana (café fora, caminhada curta) e marque no calendário."
+  },
+  7: {
+    shortDescription: "Fale na primeira pessoa com você.",
+    action: "Anote um incômodo usando “Eu me sinto...” e proponha uma ação pequena para cuidar disso amanhã."
+  },
+  8: {
+    shortDescription: "Presença simples consigo.",
+    action: "Apoie as mãos uma na outra por 1 minuto enquanto relembra algo bom do dia. Foque na sensação."
+  },
+  9: {
+    shortDescription: "Valide sua energia gasta.",
+    action: "Note um esforço invisível que você fez hoje e agradeça a si pelo cuidado. Nomeie o impacto."
+  },
+  10: {
+    shortDescription: "Celebre o micro solo.",
+    action: "Escolha algo que você venceu esta semana e comemore com um gesto simples (brinde com água, foto, anotação)."
+  },
+  11: {
+    shortDescription: "Escute a si mesmo.",
+    action: "Fale por 5 minutos para um gravador sobre um tema que gosta; depois ouça com atenção e anote o que percebeu."
+  },
+  12: {
+    shortDescription: "Ative sentidos pessoais.",
+    action: "Cheire algo que te lembre um momento bom e registre a memória em poucas linhas."
+  },
+  13: {
+    shortDescription: "Direção pessoal.",
+    action: "Escreva 3 desejos para o próximo mês e escolha um para priorizar sozinho, com data e primeiro passo."
+  },
+  14: {
+    shortDescription: "Relembre o porquê (solo).",
+    action: "Grave um áudio de 60s contando uma lembrança marcante para você. Guarde para ouvir depois."
+  },
+  15: {
+    shortDescription: "Reconheça quem você é.",
+    action: "Diga em voz alta: “Gosto de como eu...” e cite um traço seu que valoriza, com um exemplo."
+  },
+  16: {
+    shortDescription: "Presença sem distração (solo).",
+    action: "Faça uma refeição de 15 minutos sem celular. Apenas esteja presente com seus pensamentos e sensações."
+  },
+  17: {
+    shortDescription: "Toque consciente em você.",
+    action: "Mapeie seu corpo: toque ombro, costas ou mãos e note onde gosta mais de carinho, respeitando limites."
+  },
+  18: {
+    shortDescription: "Planeje leveza solo.",
+    action: "Agende uma mini-saída de 30 minutos esta semana (caminhada, sorvete, livraria) só sua."
+  },
+  19: {
+    shortDescription: "Claridade consigo.",
+    action: "Escreva um pedido claro para si amanhã: “Preciso me dar...” (tempo, pausa, foco). Seja específico e gentil."
+  },
+  20: {
+    shortDescription: "Veja seus bastidores.",
+    action: "Liste 2 tarefas invisíveis que você fez e agradeça a si. Reconheça o impacto que trouxeram."
+  },
+  21: {
+    shortDescription: "Celebre o cotidiano solo.",
+    action: "Faça um brinde com água ou chá a algo simples de hoje. Foto opcional para memória."
+  },
+  22: {
+    shortDescription: "Sincronize seu ritmo.",
+    action: "Por 2 minutos, respire no ritmo 4-4 (inala 4, exala 4), percebendo o corpo desacelerar."
+  },
+  23: {
+    shortDescription: "Novidade individual.",
+    action: "Escolha algo que nunca fez (receita nova, música nova, vídeo curto) e faça por 10 minutos."
+  },
+  24: {
+    shortDescription: "Escute o que precisa.",
+    action: "Pergunte a si: “Quero apoio ou solução?” Escolha descanso/acolhimento ou escreva um plano simples."
+  },
+  25: {
+    shortDescription: "Deixe um traço para você.",
+    action: "Escreva um bilhete para você com algo que admira e deixe em um lugar visível para ler amanhã."
+  },
+  26: {
+    shortDescription: "Crie fechamento consigo.",
+    action: "Antes de dormir, toque as mãos no peito e diga uma frase padrão: “Boa noite, estou comigo.”"
+  },
+  27: {
+    shortDescription: "Invista 30 min em você.",
+    action: "Reserve 30 minutos em um dia próximo para algo que quer fazer. Marque no calendário."
+  },
+  28: {
+    shortDescription: "Dê nome ao sentir (solo).",
+    action: "Escreva uma emoção de hoje e o gatilho. Use palavras simples: alegria, medo, cansaço, esperança."
+  },
+  29: {
+    shortDescription: "Revise seu caminho.",
+    action: "Liste três momentos favoritos deste mês e por que marcaram você. Guarde para revisar."
+  },
+  30: {
+    shortDescription: "Mensagem para você de amanhã.",
+    action: "Grave um áudio ou escreva uma carta para ouvir em 3 meses. Fale do que quer manter vivo em si."
+  },
+};
+
 const LONG_SUFFIXES = [
-  ' Termine contando em uma frase o que sentiram e o que querem repetir amanhã.',
-  ' Fechem com uma micro-ação concreta para manter essa sensação no dia seguinte.',
-  ' Antes de encerrar, anotem em 1 linha o que aprendem sobre o outro e como isso muda o clima de vocês.',
+  ' Termine anotando em uma frase o que quer repetir amanhã.',
+  ' Feche escolhendo uma coisa simples para testar amanhã.',
+  ' Antes de encerrar, escreva em 1 linha o que aprendeu e quer lembrar amanhã.',
 ];
 
 const enrichInsights = (insights: string[]): string[] =>
@@ -592,6 +718,38 @@ export const MISSIONS: Mission[] = [
   )
 ].sort((a, b) => a.day - b.day);
 
-export const getMissionByDay = (day: number): Mission | undefined => {
-  return MISSIONS.find(m => m.day === day);
+export const getMissionByDay = (day: number, mode: 'solo' | 'couple' = 'couple'): Mission | undefined => {
+  const base = MISSIONS.find(m => m.day === day);
+  if (!base) return undefined;
+  const adaptInsight = (text: string, currentMode: 'solo' | 'couple') => {
+    let simplified = text
+      .replace(/micro-ação/gi, 'ação simples')
+      .replace(/paralisa/gi, 'trava')
+      .replace(/concreta/gi, 'real');
+    if (currentMode === 'solo') {
+      simplified = simplified
+        .replace(/vocês/gi, 'você')
+        .replace(/\bos dois\b/gi, 'você')
+        .replace(/\bcasal\b/gi, 'você')
+        .replace(/\bparceir[oa]s?\b/gi, 'você')
+        .replace(/\bjuntos?\b/gi, '')
+        .replace(/\bo outro\b/gi, 'você')
+        .replace(/\bentre vocês\b/gi, 'em você')
+        .replace(/\bo que o outro\b/gi, 'o que você')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      const firstSentence = simplified.split('.').map(s => s.trim()).filter(Boolean)[0];
+      if (firstSentence) simplified = firstSentence;
+    }
+    return simplified;
+  };
+  if (mode === 'solo') {
+    const override = SOLO_OVERRIDES[base.id];
+    const merged = override ? { ...base, ...override } : base;
+    const soloInsights = merged.insights ? merged.insights.map((i) => adaptInsight(i, 'solo')) : merged.insights;
+    const soloQuote = merged.quote ? adaptInsight(merged.quote, 'solo') : merged.quote;
+    return { ...merged, insights: soloInsights, quote: soloQuote };
+  }
+  const coupleInsights = base.insights ? base.insights.map((i) => adaptInsight(i, 'couple')) : base.insights;
+  return { ...base, insights: coupleInsights };
 };

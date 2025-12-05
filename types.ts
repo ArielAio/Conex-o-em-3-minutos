@@ -11,7 +11,10 @@ export interface Mission {
 
 export interface UserProgress {
   name: string;
+  username?: string;
+  email?: string;
   partnerName?: string;
+  mode?: 'solo' | 'couple';
   startDate: string; // ISO String
   completedMissionIds: number[];
   isPremium: boolean;

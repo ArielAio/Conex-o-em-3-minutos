@@ -14,13 +14,13 @@ export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({ onSubscribe 
       </div>
       <h2 className="font-serif text-2xl text-brand-text mb-2">Desbloqueie a Conexão Profunda</h2>
       <p className="text-gray-500 mb-6 max-w-md mx-auto">
-        7 dias para testar o premium: próximo mês, histórico completo e PDF especial.
+        7 dias para testar o premium: missões extras diárias, histórico completo e PDF especial.
       </p>
       
       <div className="grid md:grid-cols-2 gap-4 max-w-lg mx-auto mb-8 text-left">
         <div className="flex items-center gap-2 text-sm text-gray-600">
             <Check className="w-4 h-4 text-green-500" />
-            <span>Acesso ao Mês 2: Conflitos sem guerra</span>
+            <span>Missões premium liberadas diariamente</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
             <Check className="w-4 h-4 text-green-500" />
