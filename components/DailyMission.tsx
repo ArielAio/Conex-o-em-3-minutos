@@ -16,6 +16,7 @@ interface DailyMissionProps {
   onSaveReflection?: (missionId: number, text: string) => void | Promise<void>;
   onToggleMode?: (mode: 'couple' | 'distance') => void | Promise<void>;
   modeSwitching?: boolean;
+  language?: 'pt' | 'en';
 }
 
 const Particles = ({ count }: { count: number }) => {
@@ -69,7 +70,10 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   onSaveReflection,
   onToggleMode,
   modeSwitching = false,
+  language = 'pt',
 }) => {
+  const isEnglish = language === 'en';
+  const t = (pt: string, en: string) => (isEnglish ? en : pt);
   const isSolo = mode === 'solo';
   const isDistance = mode === 'distance';
   const partnerLabel = !isSolo && partnerName ? partnerName : null;
@@ -160,25 +164,25 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   };
 
   const buildShareText = () => {
-    const titleLine = `${isCompleted ? 'Missão concluída' : 'Missão do dia'}: "${mission.title}" (Dia ${displayDay} • ${mission.theme})`;
-    const modeLine = isSolo ? 'Modo: Solo' : isDistance ? 'Modo: Casal à distância' : 'Modo: Casal';
-    const actionLine = `Ação: ${mission.action}`;
+    const titleLine = `${isCompleted ? t('Missão concluída', 'Mission completed') : t('Missão do dia', 'Mission of the day')}: "${mission.title}" (${t('Dia', 'Day')} ${displayDay} • ${mission.theme})`;
+    const modeLine = isSolo ? t('Modo: Solo', 'Mode: Solo') : isDistance ? t('Modo: Casal à distância', 'Mode: Long distance couple') : t('Modo: Casal', 'Mode: Couple');
+    const actionLine = `${t('Ação', 'Action')}: ${mission.action}`;
     const inviteLine = isCompleted 
       ? isSolo 
-        ? 'Quero registrar e compartilhar esse momento.' 
+        ? t('Quero registrar e compartilhar esse momento.', 'I want to record and share this moment.')
         : isDistance 
-          ? `Quero compartilhar esse momento com você por chamada${partnerLabel ? `, ${partnerLabel}` : ''}.`
-          : `Quero compartilhar esse momento com você${partnerLabel ? `, ${partnerLabel}` : ''}.`
+          ? t(`Quero compartilhar esse momento com você por chamada${partnerLabel ? `, ${partnerLabel}` : ''}.`, `Want to share this moment with you over a call${partnerLabel ? `, ${partnerLabel}` : ''}.`)
+          : t(`Quero compartilhar esse momento com você${partnerLabel ? `, ${partnerLabel}` : ''}.`, `Want to share this moment with you${partnerLabel ? `, ${partnerLabel}` : ''}.`)
       : isSolo 
-        ? 'Vamos cuidar de nós mesmos hoje? Compartilhe com quem pode se inspirar.' 
+        ? t('Vamos cuidar de nós mesmos hoje? Compartilhe com quem pode se inspirar.', 'Let’s take care of ourselves today? Share with someone who might be inspired.')
         : isDistance
-          ? `Topa fazer comigo por chamada hoje${partnerLabel ? `, ${partnerLabel}` : ''}?`
-          : `Topa fazer comigo hoje${partnerLabel ? `, ${partnerLabel}` : ''}?`;
-    const insightLine = insight ? `\nInsight que tive: "${insight}"` : '';
-    const reflectionLine = reflection ? `\nMinha nota: "${reflection}"` : '';
+          ? t(`Topa fazer comigo por chamada hoje${partnerLabel ? `, ${partnerLabel}` : ''}?`, `Want to do this with me over a call today${partnerLabel ? `, ${partnerLabel}` : ''}?`)
+          : t(`Topa fazer comigo hoje${partnerLabel ? `, ${partnerLabel}` : ''}?`, `Want to do this with me today${partnerLabel ? `, ${partnerLabel}` : ''}?`);
+    const insightLine = insight ? `\n${t('Insight que tive', 'Insight I had')}: "${insight}"` : '';
+    const reflectionLine = reflection ? `\n${t('Minha nota', 'My note')}: "${reflection}"` : '';
 
-    const linkLine = 'Acesse: https://conexao-em-3-minutos.vercel.app';
-    const remoteLine = isDistance ? '\nModo pensado para distância: façam por chamada, áudio ou vídeo.' : '';
+    const linkLine = t('Acesse:', 'Access:') + ' https://conexao-em-3-minutos.vercel.app';
+    const remoteLine = isDistance ? t('\nModo pensado para distância: façam por chamada, áudio ou vídeo.', '\nDistance-friendly: do it over a call, audio, or video.') : '';
     return `${titleLine}\n${modeLine}\n${actionLine}\n${inviteLine}${insightLine}${reflectionLine}${remoteLine}\n${linkLine}`;
   };
 
@@ -271,20 +275,20 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             <CheckCircle className="w-10 h-10 group-hover:scale-110 transition-transform duration-300" />
           </div>
           
-          <h3 className="font-serif heading-lg mb-2 text-brand-text leading-tight">Missão Cumprida!</h3>
+          <h3 className="font-serif heading-lg mb-2 text-brand-text leading-tight">{t('Missão Cumprida!', 'Mission accomplished!')}</h3>
           <p className="text-gray-500 mb-6 font-light text-fluid">
             {isSolo 
-              ? 'Você cuidou de você hoje.' 
+              ? t('Você cuidou de você hoje.', 'You took care of yourself today.')
               : isDistance 
-                ? `Vocês fortaleceram o laço mesmo longe${partnerLabel ? `, ${partnerLabel}` : ''}.`
-                : `Você e${partnerLabel ? ` ${partnerLabel}` : ' seu par'} fortaleceram o laço hoje.`}
+                ? t(`Vocês fortaleceram o laço mesmo longe${partnerLabel ? `, ${partnerLabel}` : ''}.`, `You strengthened your bond even from afar${partnerLabel ? `, ${partnerLabel}` : ''}.`)
+                : t(`Você e${partnerLabel ? ` ${partnerLabel}` : ' seu par'} fortaleceram o laço hoje.`, `You and${partnerLabel ? ` ${partnerLabel}` : ' your partner'} strengthened your bond today.`)}
           </p>
 
           <div className="bg-white/80 border border-brand-primary/20 rounded-2xl p-4 shadow-sm mb-6 text-left card-padding">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-brand-text text-sm font-semibold">
                 <Share2 className="w-4 h-4 text-brand-primary" />
-                <span>{isSolo ? 'Compartilhar missão' : `Compartilhar missão com ${partnerLabel || 'seu amor'}${isDistance ? ' por chamada' : ''}`}</span>
+                <span>{isSolo ? t('Compartilhar missão', 'Share mission') : t(`Compartilhar missão com ${partnerLabel || 'seu amor'}${isDistance ? ' por chamada' : ''}`, `Share mission with ${partnerLabel || 'your partner'}${isDistance ? ' over a call' : ''}`)}</span>
               </div>
               <Button 
                 variant="primary" 
@@ -293,18 +297,18 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 className="rounded-full px-5 py-2 text-sm font-semibold shadow-brand-primary/30"
               >
                 <Share2 className="w-4 h-4" />
-                {isSharing ? 'Preparando...' : 'Enviar missão'}
+                {isSharing ? t('Preparando...', 'Preparing...') : t('Enviar missão', 'Send mission')}
               </Button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {isSolo ? 'Envie o link para se inspirar depois ou convidar alguém.' : isDistance ? 'Envie o link para o parceiro(a) fazer por chamada ou áudio.' : 'Ele recebe o link da missão já com a ação do dia.'}
+              {isSolo ? t('Envie o link para se inspirar depois ou convidar alguém.', 'Send the link to inspire yourself later or invite someone.') : isDistance ? t('Envie o link para o parceiro(a) fazer por chamada ou áudio.', 'Send the link so your partner can do it over a call or voice note.') : t('Ele recebe o link da missão já com a ação do dia.', 'They get the mission link already with today’s action.')}
             </p>
           </div>
           
           <div className="bg-gradient-to-br from-brand-bg to-white p-6 rounded-2xl border border-brand-primary/20 mb-6 text-left shadow-sm card-padding">
              <div className="flex items-center gap-2 mb-3 text-brand-accent">
                <Sparkles className="w-4 h-4 text-brand-gold" />
-               <span className="text-xs font-bold uppercase tracking-wider text-brand-gold">Insight do Dia</span>
+               <span className="text-xs font-bold uppercase tracking-wider text-brand-gold">{t('Insight do Dia', 'Insight of the Day')}</span>
              </div>
              
              {insight ? (
@@ -314,7 +318,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
              ) : (
                 <div className="text-center py-2">
                     <Button variant="ghost" onClick={handleManualInsight} className="text-sm">
-                        <Sparkles className="w-4 h-4 mr-2" /> Revelar Insight
+                        <Sparkles className="w-4 h-4 mr-2" /> {t('Revelar Insight', 'Reveal insight')}
                     </Button>
                 </div>
              )}
@@ -327,7 +331,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             >
               <div className="flex items-center gap-2">
                 <Clock3 className="w-4 h-4 text-brand-primary" />
-                <span>Ver missão realizada</span>
+                <span>{t('Ver missão realizada', 'View completed mission')}</span>
               </div>
               <ChevronDown
                 className={`w-4 h-4 text-brand-primary transition-transform ${showCompletedDetails ? 'transform rotate-180' : ''}`}
@@ -337,7 +341,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             {showCompletedDetails && (
               <div className="mt-4 space-y-3 bg-white/80 border border-brand-primary/20 rounded-2xl p-5 shadow-sm anim-fade-slide">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-brand-primary font-bold">
-                  <span className="px-2 py-1 bg-brand-primary/10 rounded-full">Dia {displayDay}</span>
+                  <span className="px-2 py-1 bg-brand-primary/10 rounded-full">{t('Dia', 'Day')} {displayDay}</span>
                   <span className="text-gray-400">•</span>
                   <span>{mission.theme}</span>
                 </div>
@@ -366,9 +370,9 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
         >
             <div className="p-6 bg-brand-primary/10 flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-widest text-brand-accent font-bold">Conexão em 3 Minutos</p>
+                <p className="text-xs uppercase tracking-widest text-brand-accent font-bold">{t('Conexão em 3 Minutos', '3-Minute Connection')}</p>
                 <h2 className="text-3xl text-brand-text mt-1">{mission.title}</h2>
-                <p className="text-sm text-gray-500">Dia {displayDay} • {mission.theme}{isDistance ? ' • Modo distância' : ''}</p>
+                <p className="text-sm text-gray-500">{t('Dia', 'Day')} {displayDay} • {mission.theme}{isDistance ? t(' • Modo distância', ' • Distance mode') : ''}</p>
               </div>
             <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-brand-primary">
               <HeartHandshake className="w-6 h-6" />
@@ -379,7 +383,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             {(insight || (mission.insights && mission.insights.length)) && (
               <div className="bg-white border border-brand-primary/20 rounded-2xl p-4 shadow-sm">
                 <p className="text-xs uppercase tracking-widest text-brand-gold font-bold mb-2 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-brand-gold" /> Insight
+                  <Sparkles className="w-4 h-4 text-brand-gold" /> {t('Insight', 'Insight')}
                 </p>
                 <p className="text-lg text-brand-text italic">
                   “{insight || mission.insights?.[0]}”
@@ -388,15 +392,15 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             )}
             {reflection && (
               <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-3 shadow-sm">
-                <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-1">Minha nota</p>
+                <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-1">{t('Minha nota', 'My note')}</p>
                 <p className="text-sm text-brand-text">{reflection}</p>
               </div>
             )}
             <div className="flex items-center justify-between pt-2">
               <div className="text-xs text-gray-500">
-                conclua e compartilhe seu momento • conexaoem3min.com
+                {t('conclua e compartilhe seu momento', 'Finish and share your moment')} • conexaoem3min.com
               </div>
-              <div className="text-sm font-semibold text-brand-primary">#ConexãoEm3Minutos</div>
+              <div className="text-sm font-semibold text-brand-primary">#ConexaoEm3Minutos</div>
             </div>
           </div>
         </div>
@@ -404,15 +408,15 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
       <div className="bg-brand-primary/10 p-5 sm:p-6 pb-12 relative">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="text-brand-primary font-bold text-xs uppercase tracking-widest block">Dia {displayDay}</span>
+              <span className="text-brand-primary font-bold text-xs uppercase tracking-widest block">{t('Dia', 'Day')} {displayDay}</span>
               {partnerLabel && (
-                <p className="text-xs text-gray-600 mt-1">Para você e {partnerLabel}</p>
+                <p className="text-xs text-gray-600 mt-1">{t('Para você e', 'For you and')} {partnerLabel}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
               {isDistance && (
                 <span className="bg-white/80 backdrop-blur-sm text-brand-primary px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm whitespace-nowrap">
-                  Modo distância
+                  {t('Modo distância', 'Distance mode')}
                 </span>
               )}
               <span className="bg-white/80 backdrop-blur-sm text-brand-text px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
@@ -434,7 +438,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
         <div className={`transition-all duration-500 overflow-hidden ${showAction ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="bg-brand-bg p-6 rounded-2xl border-l-4 border-brand-primary mb-6 anim-fade-slide card-padding">
                 <h4 className="font-bold text-brand-accent mb-2 text-xs uppercase flex items-center gap-2">
-                    <HeartHandshake className="w-4 h-4" /> Sua Ação:
+                    <HeartHandshake className="w-4 h-4" /> {t('Sua Ação:', 'Your action:')}
                 </h4>
                 <p className="text-[clamp(1.05rem,2.6vw,1.3rem)] text-gray-800 font-serif leading-snug">
                 {mission.action}
@@ -442,7 +446,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   {partnerLabel && (
                     <p className="text-xs text-gray-500 flex items-center gap-1">
-                      {isDistance ? `Combine horário de chamada com ${partnerLabel} e envie o passo antes.` : `Combine com ${partnerLabel} antes de começar.`}
+                      {isDistance ? t(`Combine horário de chamada com ${partnerLabel} e envie o passo antes.`, `Set a call time with ${partnerLabel} and send the step beforehand.`) : t(`Combine com ${partnerLabel} antes de começar.`, `Align with ${partnerLabel} before you start.`)}
                     </p>
                   )}
                   {!isSolo && onToggleMode && (
@@ -452,20 +456,20 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                       className="text-xs sm:text-sm font-semibold text-brand-text bg-white shadow-sm border border-brand-primary/40 px-4 py-2 rounded-full hover:bg-brand-primary/10 transition disabled:opacity-60 flex items-center gap-2 self-start sm:self-end"
                     >
                       <HeartHandshake className="w-4 h-4 text-brand-primary" />
-                      {isDistance ? 'Voltar para casal presencial' : 'Parceiro(a) está distante?'}
+                      {isDistance ? t('Voltar para casal presencial', 'Switch back to in-person mode') : t('Parceiro(a) está distante?', 'Partner far away?')}
                     </button>
                   )}
                 </div>
             </div>
 
             <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-2 shadow-sm card-padding mb-6">
-              <p className="text-xs uppercase text-gray-400 font-bold tracking-[0.2em]">Reflexão em 1 linha</p>
+              <p className="text-xs uppercase text-gray-400 font-bold tracking-[0.2em]">{t('Reflexão em 1 linha', 'One-line reflection')}</p>
               <p className="text-xs text-gray-500">
                 {isSolo 
-                  ? 'O que funcionou hoje? Anote um lembrete curto para você do futuro.' 
+                  ? t('O que funcionou hoje? Anote um lembrete curto para você do futuro.', 'What worked today? Write a quick note for future you.')
                   : isDistance 
-                    ? 'O que funcionou mesmo longe? Anote um lembrete curto para revisitarem depois.' 
-                    : 'O que funcionou hoje? Anote um lembrete curto para vocês do futuro.'}
+                    ? t('O que funcionou mesmo longe? Anote um lembrete curto para revisitarem depois.', 'What worked even from afar? Leave a short reminder to revisit later.')
+                    : t('O que funcionou hoje? Anote um lembrete curto para vocês do futuro.', 'What worked today? Write a quick reminder for future you two.')}
               </p>
               <input
                 value={reflection}
@@ -479,10 +483,10 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 maxLength={140}
                 placeholder={
                   isSolo 
-                    ? "Ex.: respirei antes de responder e fiquei mais leve." 
+                    ? t("Ex.: respirei antes de responder e fiquei mais leve.", "E.g.: I breathed before replying and felt lighter.")
                     : isDistance 
-                      ? "Ex.: fizemos a respiração juntos na chamada e saímos mais calmos." 
-                      : "Ex.: respiramos antes de responder e a conversa ficou leve."
+                      ? t("Ex.: fizemos a respiração juntos na chamada e saímos mais calmos.", "E.g.: we did the breathing together on the call and felt calmer.")
+                      : t("Ex.: respiramos antes de responder e a conversa ficou leve.", "E.g.: we breathed before replying and the talk stayed light.")
                 }
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
               />
@@ -494,14 +498,14 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 <Share2 className="w-4 h-4 text-brand-primary mt-1" />
                 <div>
                   <p className="text-sm font-semibold text-brand-text">
-                    {isSolo ? 'Compartilhar missão (opcional)' : `Compartilhar missão com ${partnerLabel || 'seu amor'}${isDistance ? ' à distância' : ''}`}
+                    {isSolo ? t('Compartilhar missão (opcional)', 'Share mission (optional)') : t(`Compartilhar missão com ${partnerLabel || 'seu amor'}${isDistance ? ' à distância' : ''}`, `Share mission with ${partnerLabel || 'your partner'}${isDistance ? ' remotely' : ''}`)}
                   </p>
                   <p className="text-xs text-gray-500">
                     {isSolo 
-                      ? 'Envie o link com a ação do dia para guardar ou inspirar alguém.' 
+                      ? t('Envie o link com a ação do dia para guardar ou inspirar alguém.', 'Send the link with today’s action to save or inspire someone.')
                       : isDistance 
-                        ? `Enviamos o link com a ação do dia para fazerem por chamada ou áudio${partnerLabel ? `, ${partnerLabel}` : ''}.`
-                        : `Enviamos o link com a ação do dia para vocês fazerem juntos${partnerLabel ? `, ${partnerLabel}` : ''}.`}
+                        ? t(`Enviamos o link com a ação do dia para fazerem por chamada ou áudio${partnerLabel ? `, ${partnerLabel}` : ''}.`, `We send the link with today’s action so you can do it over a call or voice note${partnerLabel ? `, ${partnerLabel}` : ''}.`)
+                        : t(`Enviamos o link com a ação do dia para vocês fazerem juntos${partnerLabel ? `, ${partnerLabel}` : ''}.`, `We send the link with today’s action so you can do it together${partnerLabel ? `, ${partnerLabel}` : ''}.`)}
                   </p>
                 </div>
               </div>
@@ -512,7 +516,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 className="w-full md:w-auto rounded-full px-5 py-2 text-sm font-semibold shadow-brand-primary/30"
               >
                 <Share2 className="w-4 h-4" />
-                {isSharing ? 'Preparando...' : 'Enviar missão'}
+                {isSharing ? t('Preparando...', 'Preparing...') : t('Enviar missão', 'Send mission')}
               </Button>
             </div>
         </div>
@@ -525,7 +529,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 className="py-4 border-dashed border-2 hover:bg-brand-bg hover:text-brand-primary hover:border-solid group anim-pulse-soft"
             >
                 <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
-                Ver a Missão de Hoje
+                {t('Ver a Missão de Hoje', 'See today’s mission')}
             </Button>
         ) : (
             <Button 
@@ -534,7 +538,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                 disabled={isCompleted || isCompleting}
                 className="py-4 text-lg bg-gradient-to-r from-brand-primary to-brand-accent shadow-lg shadow-brand-primary/30 transform transition active:scale-95 anim-scale-pop"
             >
-                {isCompleting ? 'Salvando...' : isCompleted ? 'Concluída' : 'Marcar como Concluída'}
+                {isCompleting ? t('Salvando...', 'Saving...') : isCompleted ? t('Concluída', 'Completed') : t('Marcar como Concluída', 'Mark as completed')}
             </Button>
         )}
       </div>

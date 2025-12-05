@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import App from './App';
 import { LandingPage } from './LandingPage';
+import { LanguageProvider } from './services/i18n/language';
 
 type View = 'landing' | 'app';
 
@@ -48,10 +49,18 @@ export const Root: React.FC = () => {
   const handleStart = () => setView('app');
 
   if (view === 'landing') {
-    return <LandingPage onStart={handleStart} />;
+    return (
+      <LanguageProvider>
+        <LandingPage onStart={handleStart} />
+      </LanguageProvider>
+    );
   }
 
-  return <App />;
+  return (
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
+  );
 };
 
 export default Root;

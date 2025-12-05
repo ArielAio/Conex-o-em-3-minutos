@@ -3,12 +3,16 @@ import { Button } from './Button';
 import { Heart, ArrowRight, AlertTriangle, Copy, Check } from 'lucide-react';
 import { createAccountWithEmail, loginWithEmail, loginWithGoogle } from '../services/firebase';
 import { translateAuthError } from '../services/firebaseErrors';
+import { LanguageSelector } from './LanguageSelector';
+import { useLanguage } from '../services/i18n/language';
 
 interface OnboardingProps {
     onComplete: (name: string, partnerName: string, mode: 'solo' | 'couple' | 'distance') => void;
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+    const { language } = useLanguage();
+    const t = (pt: string, en: string) => (language === 'en' ? en : pt);
     const [step, setStep] = useState<number | 'modeConfirm'>(0); // 0 = Welcome/Login, 1 = My Name, 2 = Partner Name, modeConfirm = pós signup
     const [name, setName] = useState('');
     const [partnerName, setPartnerName] = useState('');
@@ -147,6 +151,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     return (
         <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6 pb-safe pt-safe px-safe animate-fade-in">
             <div className="w-full max-w-md app-shell">
+                <div className="flex justify-center mb-4">
+                    <LanguageSelector emphasize />
+                </div>
                 <div className="flex justify-center mb-8">
                     <div className="bg-white p-4 rounded-full shadow-lg shadow-brand-primary/20">
                          <Heart className="w-10 h-10 text-brand-primary fill-brand-primary animate-pulse-slow" />
@@ -157,11 +164,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     
                     {step === 0 && (
                         <div className="animate-slide-up space-y-4">
-                            <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">Bem-vindo(a)</h1>
+                            <h1 className="font-serif heading-md mb-2 text-brand-text leading-tight">
+                              {t('Bem-vindo(a)', 'Welcome')}
+                            </h1>
                             <p className="text-gray-500 mb-6 text-sm leading-relaxed">
                                 {authMode === 'signin'
-                                  ? "Entre na sua conta para continuar de onde parou."
-                                  : "Escolha como quer viver a jornada: sozinho(a), em casal presencial ou à distância. Você pode ajustar depois no perfil."}
+                                  ? t('Entre na sua conta para continuar de onde parou.', 'Sign in to continue where you left off.')
+                                  : t('Escolha como quer viver a jornada: sozinho(a), em casal presencial ou à distância. Você pode ajustar depois no perfil.',
+                                  'Choose how you want to experience the journey: solo, in-person couple, or long-distance. You can adjust later in the profile.')}
                             </p>
 
                             {authMode !== 'signin' && (
@@ -170,22 +180,22 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                     onClick={() => setMode('solo')}
                                     className={`p-3 rounded-xl border ${mode === 'solo' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} text-sm transition-all`}
                                   >
-                                    <p className="font-semibold text-brand-text">Solo</p>
-                                    <p className="text-xs text-gray-500">Autocuidado, comunicação futura, presença consigo.</p>
+                                    <p className="font-semibold text-brand-text">{t('Solo', 'Solo')}</p>
+                                    <p className="text-xs text-gray-500">{t('Autocuidado, comunicação futura, presença consigo.', 'Self-care, future communication, presence with yourself.')}</p>
                                   </button>
                                   <button
                                     onClick={() => setMode('couple')}
                                     className={`p-3 rounded-xl border ${mode === 'couple' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} text-sm transition-all`}
                                   >
-                                    <p className="font-semibold text-brand-text">Casal</p>
-                                    <p className="text-xs text-gray-500">Rituais a dois, redução de ruídos, alinhamento diário.</p>
+                                    <p className="font-semibold text-brand-text">{t('Casal', 'Couple')}</p>
+                                    <p className="text-xs text-gray-500">{t('Rituais a dois, redução de ruídos, alinhamento diário.', 'Rituals for two, less noise, daily alignment.')}</p>
                                   </button>
                                   <button
                                     onClick={() => setMode('distance')}
                                     className={`p-3 rounded-xl border ${mode === 'distance' ? 'border-brand-primary bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} text-sm transition-all`}
                                   >
-                                    <p className="font-semibold text-brand-text">Casal à distância</p>
-                                    <p className="text-xs text-gray-500">Chamadas, áudios e rituais remotos.</p>
+                                    <p className="font-semibold text-brand-text">{t('Casal à distância', 'Long-distance couple')}</p>
+                                    <p className="text-xs text-gray-500">{t('Chamadas, áudios e rituais remotos.', 'Calls, audio, and remote rituals.')}</p>
                                   </button>
                               </div>
                             )}
@@ -225,7 +235,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                         className="border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
                                     >
                                         {isLoading ? (
-                                            <span className="animate-pulse">Conectando...</span>
+                                            <span className="animate-pulse">{t('Conectando...', 'Connecting...')}</span>
                                         ) : (
                                             <>
                                                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -234,14 +244,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                                                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                                                 </svg>
-                                                Entrar com Google
+                                                {t('Entrar com Google', 'Sign in with Google')}
                                             </>
                                         )}
                                     </Button>
 
                                     <div className="flex items-center gap-2 justify-center my-4">
                                         <div className="h-px bg-gray-200 w-12"></div>
-                                        <span className="text-xs text-gray-400">ou use seu e-mail</span>
+                                        <span className="text-xs text-gray-400">{t('ou use seu e-mail', 'or use your email')}</span>
                                         <div className="h-px bg-gray-200 w-12"></div>
                                     </div>
 
@@ -252,7 +262,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                             fullWidth
                                             className="bg-brand-text text-white hover:bg-black"
                                         >
-                                            Criar conta
+                                            {t('Criar conta', 'Create account')}
                                         </Button>
                                         <Button 
                                             onClick={() => { setAuthMode('signin'); setErrorMsg(null); }} 
@@ -260,7 +270,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                             fullWidth
                                             className="bg-gray-50 text-brand-text border-gray-200"
                                         >
-                                            Entrar
+                                            {t('Entrar', 'Sign in')}
                                         </Button>
                                     </div>
 
@@ -276,7 +286,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                         fullWidth
                                         className="bg-brand-primary/10 text-brand-primary border-none shadow-none hover:bg-brand-primary/20"
                                     >
-                                        Continuar como Visitante
+                                        {t('Continuar como Visitante', 'Continue as Guest')}
                                     </Button>
                                 </>
                             )}
@@ -284,26 +294,26 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             {authMode === 'signup' && (
                                 <div className="space-y-3 text-left animate-fade-slide-fast">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-sm font-semibold text-brand-text">Criar conta com e-mail</p>
+                                        <p className="text-sm font-semibold text-brand-text">{t('Criar conta com e-mail', 'Create account with email')}</p>
                                         <button 
                                             onClick={() => { setAuthMode('choice'); setErrorMsg(null); }} 
                                             className="text-xs text-gray-500 hover:text-brand-primary"
                                         >
-                                            Voltar
+                                            {t('Voltar', 'Back')}
                                         </button>
                                     </div>
                                     <input 
                                         type="text"
                                         value={signupUsername}
                                         onChange={(e) => setSignupUsername(e.target.value)}
-                                        placeholder="Nome de usuário"
+                                        placeholder={t('Nome de usuário', 'Username')}
                                         className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-brand-primary/40 text-sm outline-none transition-all"
                                     />
                                     <input 
                                         type="email"
                                         value={signupEmail}
                                         onChange={(e) => setSignupEmail(e.target.value)}
-                                        placeholder="Seu e-mail"
+                                        placeholder={t('Seu e-mail', 'Your email')}
                                         className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-brand-primary/40 text-sm outline-none transition-all"
                                     />
                                     <input 
@@ -319,10 +329,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                         disabled={authLoading || !signupEmail || !signupPassword || !signupUsername}
                                         className="bg-brand-text text-white hover:bg-black"
                                     >
-                                        {authLoading ? 'Criando...' : 'Criar conta e continuar'}
+                                        {authLoading ? t('Criando...', 'Creating...') : t('Criar conta e continuar', 'Create account and continue')}
                                     </Button>
                                     <p className="text-[11px] text-gray-500 text-center">
-                                        Usaremos este nome de usuário no painel e para registrar você no banco de dados.
+                                        {t('Usaremos este nome de usuário no painel e para registrar você no banco de dados.', 'We will use this username on the dashboard and to register you in the database.')}
                                     </p>
                                 </div>
                             )}
@@ -349,7 +359,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                         type="password"
                                         value={signinPassword}
                                         onChange={(e) => setSigninPassword(e.target.value)}
-                                        placeholder="Senha"
+                                        placeholder={t('Senha', 'Password')}
                                         className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-brand-primary/40 text-sm outline-none transition-all"
                                     />
                                     <Button 
@@ -476,7 +486,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </div>
                 
                 <p className="text-center text-gray-400 text-xs mt-8">
-                    Conexão em 3 Minutos • Jornada guiada de 7 dias gratuita
+                    {t('Conexão em 3 Minutos • Jornada guiada de 7 dias gratuita', '3-Minute Connection • Guided 7-day journey free')}
                 </p>
             </div>
         </div>

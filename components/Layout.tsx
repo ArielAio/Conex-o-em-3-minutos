@@ -6,9 +6,12 @@ interface LayoutProps {
   userStreak: number;
   activeTab: 'mission' | 'history' | 'profile';
   onTabChange: (tab: 'mission' | 'history' | 'profile') => void;
+  language?: 'pt' | 'en';
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab, onTabChange }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab, onTabChange, language = 'pt' }) => {
+  
+  const t = (pt: string, en: string) => (language === 'en' ? en : pt);
   
   const NavItem = ({ icon: Icon, id, label }: { icon: any, id: 'mission' | 'history' | 'profile', label: string }) => {
     const isActive = activeTab === id;
@@ -42,9 +45,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
             <Heart className="w-8 h-8 text-brand-primary fill-brand-primary" />
         </div>
         <div className="flex flex-col gap-8 w-full px-2">
-            <NavItem icon={Sparkles} id="mission" label="Hoje" />
-            <NavItem icon={Calendar} id="history" label="Histórico" />
-            <NavItem icon={User} id="profile" label="Perfil" />
+            <NavItem icon={Sparkles} id="mission" label={t('Hoje', 'Today')} />
+            <NavItem icon={Calendar} id="history" label={t('Histórico', 'History')} />
+            <NavItem icon={User} id="profile" label={t('Perfil', 'Profile')} />
         </div>
       </aside>
 
@@ -54,9 +57,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
            <Heart className="w-5 h-5 text-brand-primary fill-brand-primary animate-pulse-slow" />
           <span className="font-serif font-bold heading-md text-brand-text leading-none truncate">Conexão</span>
         </div>
-        <div className="flex items-center gap-2 bg-brand-primary/10 px-3 py-1 rounded-full">
+          <div className="flex items-center gap-2 bg-brand-primary/10 px-3 py-1 rounded-full">
             <span className="text-brand-primary font-bold text-sm leading-none">🔥 {userStreak}</span>
-        </div>
+          </div>
       </header>
 
       {/* Main Content */}
@@ -67,7 +70,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, userStreak, activeTab,
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] z-50 pb-safe">
         <div className="flex justify-around items-end px-safe pb-2 pt-1">
-          <NavItem icon={Calendar} id="history" label="Jornada" />
+          <NavItem icon={Calendar} id="history" label={t('Jornada', 'Journey')} />
           <div className="relative -top-5">
              <button 
                 onClick={() => onTabChange('mission')}

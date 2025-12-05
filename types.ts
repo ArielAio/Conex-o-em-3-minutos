@@ -15,6 +15,7 @@ export interface UserProgress {
   email?: string;
   partnerName?: string;
   mode?: 'solo' | 'couple' | 'distance';
+  language?: 'pt' | 'en';
   startDate: string; // ISO String
   completedMissionIds: number[];
   isPremium: boolean;

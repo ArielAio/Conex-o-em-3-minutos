@@ -4,8 +4,9 @@ import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
-import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection, clearLocalUserData, DEFAULT_USER, saveUserData } from './services/storageService';
+import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection, clearLocalUserData, DEFAULT_USER, saveUserData, updateLanguagePreference } from './services/storageService';
 import { MISSIONS, getMissionForDayRandom, getShuffledMissions, getMissionByIdMode, adaptMission } from './services/mockData';
+import { NEXT_STEP_SUGGESTIONS_EN, SOLO_NEXT_STEP_SUGGESTIONS_EN, DISTANCE_NEXT_STEP_SUGGESTIONS_EN } from './services/i18n/content';
 
 const DEFAULT_MISSION_ORDER = MISSIONS.map((m) => m.id);
 import { UserProgress, CURRENT_MONTH_THEME, Mission } from './types';
@@ -14,13 +15,17 @@ import { auth, logoutUser, loginWithGoogle } from './services/firebase';
 import { translateAuthError } from './services/firebaseErrors';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './components/Button';
+import { LanguageSelector } from './components/LanguageSelector';
+import { useLanguage } from './services/i18n/language';
 
-const formatToday = () => {
+const formatToday = (language: 'pt' | 'en' = 'pt') => {
   const today = new Date();
-  return today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+  const locale = language === 'en' ? 'en-US' : 'pt-BR';
+  return today.toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' });
 };
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
+const ACTIVE_TAB_KEY = 'ce3m:active-tab';
 const getLocalDateKey = (date: Date = new Date()) => {
   const y = date.getFullYear();
   const m = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -48,8 +53,13 @@ const PREMIUM_PREVIEW = {
   teaser: 'Teste premium traz missões novas todos os dias e mensagens que se adaptam ao seu ritmo.'
 };
 
-const getGreeting = () => {
+const getGreeting = (language: 'pt' | 'en' = 'pt') => {
   const hour = new Date().getHours();
+  if (language === 'en') {
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
   if (hour < 12) return 'Bom dia';
   if (hour < 18) return 'Boa tarde';
   return 'Boa noite';
@@ -158,9 +168,15 @@ const DISTANCE_NEXT_STEP_SUGGESTIONS = [
 ];
 
 const App = () => {
+  const { language, setLanguage } = useLanguage();
   const [user, setUser] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'mission' | 'history' | 'profile'>('mission');
+  const [activeTab, setActiveTab] = useState<'mission' | 'history' | 'profile'>(() => {
+    if (typeof window === 'undefined') return 'mission';
+    const stored = window.localStorage.getItem(ACTIVE_TAB_KEY);
+    if (stored === 'mission' || stored === 'history' || stored === 'profile') return stored;
+    return 'mission';
+  });
   const [editName, setEditName] = useState('');
   const [editPartnerName, setEditPartnerName] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
@@ -186,10 +202,10 @@ const App = () => {
     const order = missionOrder.length === MISSIONS.length ? missionOrder : DEFAULT_MISSION_ORDER;
     const missionId = order[day - 1];
     if (missionId) {
-      const fromOrder = getMissionByIdMode(missionId, missionMode || 'couple');
+      const fromOrder = getMissionByIdMode(missionId, missionMode || 'couple', language);
       if (fromOrder) return fromOrder;
     }
-    return getMissionForDayRandom(day, missionMode || 'couple', shuffleSeed);
+    return getMissionForDayRandom(day, missionMode || 'couple', shuffleSeed, language);
   };
   const [highlightReflection, setHighlightReflection] = useState<{ title: string; text: string } | null>(null);
   
@@ -219,6 +235,7 @@ const App = () => {
         streak: 0,
         lastLoginDate: new Date().toISOString(),
         reflections: {},
+        language,
       };
       setUser(fallback);
     } finally {
@@ -233,6 +250,27 @@ const App = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedLang = window.localStorage.getItem('ce3m:language');
+    if (!storedLang && user?.language && user.language !== language) {
+      setLanguage(user.language);
+    }
+  }, [user?.language, language, setLanguage]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(ACTIVE_TAB_KEY, activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (user && !user.language) {
+      const updated = { ...user, language };
+      setUser(updated);
+      saveUserData(updated);
+    }
+  }, [user, language]);
 
   useEffect(() => {
     if (user) {
@@ -265,7 +303,7 @@ const App = () => {
     const order = missionOrder.length === MISSIONS.length ? missionOrder : getShuffledMissions(seed).map((m) => m.id);
     order.forEach((missionId, idx) => {
       const base = MISSIONS.find((m) => m.id === missionId) || MISSIONS[idx];
-      const missionData = getMissionByIdMode(base.id, missionMode || 'couple') || adaptMission(base, missionMode || 'couple');
+      const missionData = getMissionByIdMode(base.id, missionMode || 'couple', language) || adaptMission(base, missionMode || 'couple', language);
       const reflection = getReflectionForMission(base.id);
       if (reflection && reflection.trim().length > 0) {
         if (!best || reflection.length > best.text.length) {
@@ -474,6 +512,17 @@ const App = () => {
     }
   };
 
+  const handleLanguageChange = async (lang: 'pt' | 'en') => {
+    setLanguage(lang);
+    if (!user) return;
+    try {
+      const updated = await updateLanguagePreference(lang, user);
+      setUser(updated);
+    } catch (error) {
+      console.error("Erro ao salvar idioma", error);
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-brand-bg text-brand-primary anim-pulse-soft">
         <HeartPulse />
@@ -490,14 +539,16 @@ const App = () => {
 
   const renderMissionView = () => {
     const suggestionList = missionMode === 'solo' 
-      ? SOLO_NEXT_STEP_SUGGESTIONS 
+      ? (language === 'en' ? SOLO_NEXT_STEP_SUGGESTIONS_EN : SOLO_NEXT_STEP_SUGGESTIONS)
       : missionMode === 'distance'
-        ? DISTANCE_NEXT_STEP_SUGGESTIONS
-        : NEXT_STEP_SUGGESTIONS;
+        ? (language === 'en' ? DISTANCE_NEXT_STEP_SUGGESTIONS_EN : DISTANCE_NEXT_STEP_SUGGESTIONS)
+        : (language === 'en' ? NEXT_STEP_SUGGESTIONS_EN : NEXT_STEP_SUGGESTIONS);
     const shareSuggestion = async () => {
       if (!activeMission) return;
       const suggestion = suggestionList[(currentDay - 1) % suggestionList.length];
-      const text = `Acabei "${activeMission.title}" (Dia ${currentDay}) no Conexão em 3 Minutos. Próximo passo sugerido: ${suggestion}`;
+      const text = language === 'en'
+        ? `Just finished "${activeMission.title}" (Day ${currentDay}) on 3-Minute Connection. Suggested next step: ${suggestion}`
+        : `Acabei "${activeMission.title}" (Dia ${currentDay}) no Conexão em 3 Minutos. Próximo passo sugerido: ${suggestion}`;
       try {
         await navigator.share({ title: 'Próximo passo', text });
       } catch (err) {
@@ -508,8 +559,8 @@ const App = () => {
     return (
     <div className="space-y-6 md:space-y-8">
         <header className="mb-4">
-            <h1 className="font-serif heading-lg text-brand-text leading-tight">{getGreeting()}, {user.name.split(' ')[0]}</h1>
-            <p className="text-gray-500 text-xs sm:text-sm">{formatToday()}</p>
+            <h1 className="font-serif heading-lg text-brand-text leading-tight">{getGreeting(language)}, {user.name.split(' ')[0]}</h1>
+            <p className="text-gray-500 text-xs sm:text-sm">{formatToday(language)}</p>
         </header>
 
         <div className="grid gap-3">
@@ -556,6 +607,7 @@ const App = () => {
             onSaveReflection={handleSaveReflection}
             onToggleMode={handleMissionToggleMode}
             modeSwitching={modeSwitching}
+            language={language}
           />
         ) : (
           <div className="text-center py-10 bg-white rounded-3xl p-8 shadow-sm">
@@ -660,14 +712,16 @@ const App = () => {
     return (
         <div className="space-y-6 md:space-y-8">
             <header>
-                <h2 className="font-serif heading-md text-brand-text mb-1 leading-tight">Sua Jornada</h2>
+                <h2 className="font-serif heading-md text-brand-text mb-1 leading-tight">
+                  {language === 'en' ? 'Your Journey' : 'Sua Jornada'}
+                </h2>
                 <p className="text-xs text-brand-primary uppercase tracking-widest font-bold">{CURRENT_MONTH_THEME}</p>
             </header>
 
             <div className="space-y-0">
                 {visibleIds.map((missionId, index) => {
                     const dayNumber = index + 1;
-                    const missionData = getMissionByIdMode(missionId, missionMode || 'couple');
+                const missionData = getMissionByIdMode(missionId, missionMode || 'couple', language);
                     const isDone = user.completedMissionIds.includes(missionId);
                     const isLocked = !isDone && dayNumber > currentDay;
                     const isFuture = dayNumber > currentDay;
@@ -698,10 +752,12 @@ const App = () => {
                             }`}>
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-gray-400 uppercase">Dia {dayNumber}</span>
+                                        <span className="text-xs font-bold text-gray-400 uppercase">
+                                          {language === 'en' ? 'Day' : 'Dia'} {dayNumber}
+                                        </span>
                                     </div>
                                     {isDone && <Check className="w-4 h-4 text-green-500" />}
-                                    {isLocked && <span className="text-xs text-gray-300">Bloqueado</span>}
+                                    {isLocked && <span className="text-xs text-gray-300">{language === 'en' ? 'Locked' : 'Bloqueado'}</span>}
                                 </div>
                                 
                                 <div className="flex items-center gap-2">
@@ -716,7 +772,7 @@ const App = () => {
                                 {isDone && <p className="text-sm text-gray-500 mt-1 line-clamp-1">{missionData.action}</p>}
                                 {isDone && reflection.trim() && (
                                   <p className="text-xs text-gray-600 mt-1 italic line-clamp-2">
-                                    Reflexão: {reflection.trim()}
+                                    {language === 'en' ? 'Reflection:' : 'Reflexão:'} {reflection.trim()}
                                   </p>
                                 )}
                             </div>
@@ -731,7 +787,7 @@ const App = () => {
                     className="w-full py-3 flex items-center justify-center text-sm text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors"
                 >
                     <ChevronDown className="w-4 h-4 mr-2" />
-                    Carregar mais missões
+                    {language === 'en' ? 'Load more missions' : 'Carregar mais missões'}
                 </button>
             )}
             
@@ -759,11 +815,11 @@ const App = () => {
               <div className="grid grid-cols-2 gap-3 sm:gap-5 border-t border-gray-100 pt-6">
                   <div className="text-center">
                       <span className="block text-2xl font-bold text-brand-primary">{user.streak}</span>
-                      <span className="text-xs text-gray-400 uppercase">Dias Seguidos</span>
+                      <span className="text-xs text-gray-400 uppercase">{language === 'en' ? 'Day streak' : 'Dias Seguidos'}</span>
                   </div>
                   <div className="text-center">
                       <span className="block text-2xl font-bold text-brand-primary">{user.completedMissionIds.length}</span>
-                      <span className="text-xs text-gray-400 uppercase">Missões</span>
+                      <span className="text-xs text-gray-400 uppercase">{language === 'en' ? 'Missions' : 'Missões'}</span>
                   </div>
               </div>
 
@@ -778,7 +834,7 @@ const App = () => {
             <div className="p-4 rounded-xl border border-gray-100 bg-white card-padding soft-hover transition-all duration-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-brand-text">Você está conectado</p>
+                  <p className="text-sm font-semibold text-brand-text">{language === 'en' ? 'You are signed in' : 'Você está conectado'}</p>
                   <p className="text-xs text-gray-500 truncate">{auth.currentUser.email || auth.currentUser.displayName}</p>
                 </div>
                 <Button 
@@ -786,16 +842,26 @@ const App = () => {
                   variant="outline" 
                   className="text-sm px-4 py-2 border-red-200 text-red-500 hover:bg-red-50"
                 >
-                  <LogOut className="w-4 h-4" /> Sair
+                  <LogOut className="w-4 h-4" /> {language === 'en' ? 'Sign out' : 'Sair'}
                 </Button>
               </div>
             </div>
           )}
 
+          <div className="p-4 rounded-xl border border-gray-100 bg-white card-padding soft-hover transition-all duration-300">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-sm font-semibold text-brand-text">{language === 'en' ? 'Panel language' : 'Idioma do painel'}</p>
+                <p className="text-xs text-gray-500">{language === 'en' ? 'Choose Portuguese or English, or let the browser auto-detect.' : 'Escolha entre Português e English ou deixe no automático pelo navegador.'}</p>
+              </div>
+              <LanguageSelector onChange={handleLanguageChange} />
+            </div>
+          </div>
+
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm card-padding">
-            <h3 className="text-sm font-semibold text-brand-text mb-3">Selos de hábito</h3>
+            <h3 className="text-sm font-semibold text-brand-text mb-3">{language === 'en' ? 'Habit badges' : 'Selos de hábito'}</h3>
             <div className="grid grid-cols-3 gap-3">
-              {[{label: '3 dias', threshold: 3}, {label: '7 dias', threshold: 7}, {label: '14 dias', threshold: 14}].map(({label, threshold}) => {
+              {[{label: language === 'en' ? '3 days' : '3 dias', threshold: 3}, {label: language === 'en' ? '7 days' : '7 dias', threshold: 7}, {label: language === 'en' ? '14 days' : '14 dias', threshold: 14}].map(({label, threshold}) => {
                 const lockedByPlan = !user.isPremium;
                 const achieved = !lockedByPlan && user.streak >= threshold;
                 const locked = lockedByPlan;
@@ -803,7 +869,7 @@ const App = () => {
                   <div key={label} className={`p-3 rounded-xl border text-center ${achieved ? 'border-brand-primary/40 bg-brand-primary/10' : 'border-gray-200 bg-gray-50'} ${locked ? 'opacity-70' : ''}`}>
                     <p className="text-xs font-bold text-gray-500 uppercase">{label}</p>
                     <p className="text-sm text-brand-text font-semibold">
-                      {locked ? 'Assine para liberar' : achieved ? 'Conquistado' : 'Em progresso'}
+                      {locked ? (language === 'en' ? 'Subscribe to unlock' : 'Assine para liberar') : achieved ? (language === 'en' ? 'Achieved' : 'Conquistado') : (language === 'en' ? 'In progress' : 'Em progresso')}
                     </p>
                   </div>
                 );
@@ -815,15 +881,15 @@ const App = () => {
             <div className="bg-white p-4 rounded-xl border border-gray-100 soft-hover transition-all duration-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-brand-text">Plano ativo</p>
-                  <p className="text-xs text-gray-500">Cancele quando quiser. O acesso vai até o fim do ciclo pago.</p>
+                  <p className="text-sm font-semibold text-brand-text">{language === 'en' ? 'Active plan' : 'Plano ativo'}</p>
+                  <p className="text-xs text-gray-500">{language === 'en' ? 'Cancel anytime. Access remains until the end of the paid cycle.' : 'Cancele quando quiser. O acesso vai até o fim do ciclo pago.'}</p>
                 </div>
                 <Button 
                   onClick={handleCancelSubscription} 
                   variant="outline" 
                   className="text-sm px-4 py-2 border-red-200 text-red-500 hover:bg-red-50"
                 >
-                  Cancelar assinatura
+                  {language === 'en' ? 'Cancel subscription' : 'Cancelar assinatura'}
                 </Button>
               </div>
             </div>
@@ -835,46 +901,48 @@ const App = () => {
                 <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 text-brand-gold fill-brand-gold" />
                   <div>
-                    <p className="text-sm font-semibold text-brand-text">Assine para liberar tudo</p>
-                    <p className="text-xs text-gray-500">Teste premium por 7 dias • Sem fidelidade</p>
+                    <p className="text-sm font-semibold text-brand-text">{language === 'en' ? 'Subscribe to unlock everything' : 'Assine para liberar tudo'}</p>
+                    <p className="text-xs text-gray-500">{language === 'en' ? '7-day premium trial • No commitment' : 'Teste premium por 7 dias • Sem fidelidade'}</p>
                   </div>
                 </div>
-                <div className="text-sm text-gray-600 font-semibold">R$ 9,90 / mês</div>
+                <div className="text-sm text-gray-600 font-semibold">
+                  {language === 'en' ? '$0.99 / month' : 'R$ 9,90 / mês'}
+                </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-3 text-sm text-brand-text">
                 <div className="flex items-start gap-2">
                   <Check className="w-4 h-4 text-green-500" />
                   <div>
-                    <p className="font-semibold">Missões premium diárias</p>
-                    <p className="text-xs text-gray-500">Novos roteiros liberados durante o teste e assinatura.</p>
+                    <p className="font-semibold">{language === 'en' ? 'Daily premium missions' : 'Missões premium diárias'}</p>
+                    <p className="text-xs text-gray-500">{language === 'en' ? 'New scripts unlocked during trial and subscription.' : 'Novos roteiros liberados durante o teste e assinatura.'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="w-4 h-4 text-green-500" />
                   <div>
-                    <p className="font-semibold">PDF premium</p>
-                    <p className="text-xs text-gray-500">Com reflexões salvas e estatísticas do mês.</p>
+                    <p className="font-semibold">{language === 'en' ? 'Premium PDF' : 'PDF premium'}</p>
+                    <p className="text-xs text-gray-500">{language === 'en' ? 'With saved reflections and monthly stats.' : 'Com reflexões salvas e estatísticas do mês.'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="w-4 h-4 text-green-500" />
                   <div>
-                    <p className="font-semibold">Rituais semanais extras</p>
-                    <p className="text-xs text-gray-500">Check-ins para manter o ritmo e reduzir ruído.</p>
+                    <p className="font-semibold">{language === 'en' ? 'Extra weekly rituals' : 'Rituais semanais extras'}</p>
+                    <p className="text-xs text-gray-500">{language === 'en' ? 'Check-ins to keep the pace and reduce friction.' : 'Check-ins para manter o ritmo e reduzir ruído.'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="w-4 h-4 text-green-500" />
                   <div>
-                    <p className="font-semibold">Histórico ilimitado + selos</p>
-                    <p className="text-xs text-gray-500">Veja todo o caminho e libere os selos de hábito.</p>
+                    <p className="font-semibold">{language === 'en' ? 'Unlimited history + badges' : 'Histórico ilimitado + selos'}</p>
+                    <p className="text-xs text-gray-500">{language === 'en' ? 'See your full path and unlock habit badges.' : 'Veja todo o caminho e libere os selos de hábito.'}</p>
                   </div>
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
-                <span>Cancele fácil no perfil</span>
+                <span>{language === 'en' ? 'Cancel easily in your profile' : 'Cancele fácil no perfil'}</span>
                 <Button onClick={handleSubscribe} className="w-full sm:w-auto bg-brand-text text-white hover:bg-black px-6">
-                  Assinar e testar 7 dias
+                  {language === 'en' ? 'Subscribe and try 7 days' : 'Assinar e testar 7 dias'}
                 </Button>
               </div>
             </div>
@@ -884,15 +952,15 @@ const App = () => {
             <div className="p-4 rounded-xl border border-gray-100 bg-white card-padding soft-hover transition-all duration-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-brand-text">Entrar para sincronizar</p>
-                  <p className="text-xs text-gray-500">Guarde seu progresso em qualquer dispositivo</p>
+                  <p className="text-sm font-semibold text-brand-text">{language === 'en' ? 'Sign in to sync' : 'Entrar para sincronizar'}</p>
+                  <p className="text-xs text-gray-500">{language === 'en' ? 'Save your progress on any device' : 'Guarde seu progresso em qualquer dispositivo'}</p>
                 </div>
                 <Button 
                   onClick={handleLogin} 
                   variant="outline" 
                   className="text-sm px-4 py-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10"
                 >
-                  Entrar com Google
+                  {language === 'en' ? 'Sign in with Google' : 'Entrar com Google'}
                 </Button>
               </div>
             </div>
@@ -903,44 +971,48 @@ const App = () => {
                    <Star className={`w-5 h-5 ${user.isPremium ? 'text-brand-gold fill-brand-gold' : 'text-gray-300'}`} />
                </div>
                <div>
-                   <h3 className="font-bold text-brand-text text-sm">Plano {user.isPremium ? 'Premium' : 'Gratuito'}</h3>
-                   <p className="text-xs text-gray-500">{user.isPremium ? 'Acesso total liberado' : 'Assine para ver mais'}</p>
+                   <h3 className="font-bold text-brand-text text-sm">
+                    {language === 'en' ? 'Plan ' : 'Plano '}{user.isPremium ? 'Premium' : (language === 'en' ? 'Free' : 'Gratuito')}
+                   </h3>
+                   <p className="text-xs text-gray-500">
+                    {user.isPremium ? (language === 'en' ? 'Full access unlocked' : 'Acesso total liberado') : (language === 'en' ? 'Subscribe to unlock more' : 'Assine para ver mais')}
+                   </p>
                </div>
                {!user.isPremium && (
                    <button onClick={handleSubscribe} className="ml-auto text-xs bg-brand-text text-white px-3 py-1 rounded-full">
-                       Upgrade
+                       {language === 'en' ? 'Upgrade' : 'Upgrade'}
                    </button>
                )}
           </div>
           
           <div className="p-4 rounded-xl border border-gray-100 bg-white soft-hover transition-all duration-300">
                <button className="flex items-center gap-3 w-full text-gray-600 text-sm py-2">
-                   <Settings className="w-4 h-4" /> Configurações de Notificação
+                   <Settings className="w-4 h-4" /> {language === 'en' ? 'Notification settings' : 'Configurações de Notificação'}
                </button>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3 card-padding soft-hover transition-all duration-300">
-              <h3 className="font-semibold text-sm text-brand-text">Editar informações</h3>
+              <h3 className="font-semibold text-sm text-brand-text">{language === 'en' ? 'Edit information' : 'Editar informações'}</h3>
               <div className="flex flex-wrap gap-2">
                 <Button 
                   variant="outline"
                   className="text-xs px-3 py-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10"
                   onClick={() => setShowModeModal(true)}
                 >
-                  Trocar modo
+                  {language === 'en' ? 'Change mode' : 'Trocar modo'}
                 </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input 
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Seu nome"
+                    placeholder={language === 'en' ? 'Your name' : 'Seu nome'}
                     className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
                   />
                   <input 
                     value={editPartnerName}
                     onChange={(e) => setEditPartnerName(e.target.value)}
-                    placeholder="Nome do parceiro(a)"
+                    placeholder={language === 'en' ? 'Partner name' : 'Nome do parceiro(a)'}
                     className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
                   />
               </div>
@@ -951,14 +1023,14 @@ const App = () => {
                     className="px-4 py-2 text-sm"
                     disabled={!editName.trim() || (user?.mode !== 'solo' && !editPartnerName.trim())}
                   >
-                    Salvar
+                    {language === 'en' ? 'Save' : 'Salvar'}
                   </Button>
               </div>
           </div>
 
           {resetSuccess && (
             <div className="bg-green-50 border border-green-100 text-green-700 rounded-xl p-3 text-sm">
-              Progresso resetado com sucesso. Você voltou para o dia 1.
+              {language === 'en' ? 'Progress reset successfully. You are back to day 1.' : 'Progresso resetado com sucesso. Você voltou para o dia 1.'}
             </div>
           )}
 
@@ -968,8 +1040,8 @@ const App = () => {
                       <RotateCcw className="w-4 h-4" />
                   </div>
                   <div className="flex-1">
-                      <h3 className="font-semibold text-sm text-red-600">Resetar jornada</h3>
-                      <p className="text-xs text-gray-500">Zera missões concluídas, streak e reinicia no dia 1. Ação irreversível.</p>
+                      <h3 className="font-semibold text-sm text-red-600">{language === 'en' ? 'Reset journey' : 'Resetar jornada'}</h3>
+                      <p className="text-xs text-gray-500">{language === 'en' ? 'Clear completed missions, streak, and restart at day 1. Irreversible action.' : 'Zera missões concluídas, streak e reinicia no dia 1. Ação irreversível.'}</p>
                   </div>
                   <AlertTriangle className="w-4 h-4 text-red-400" />
               </div>
@@ -978,7 +1050,7 @@ const App = () => {
                 variant="outline"
                 className="w-full border-red-300 text-red-600 hover:bg-red-50"
               >
-                Resetar progresso
+                {language === 'en' ? 'Reset progress' : 'Resetar progresso'}
               </Button>
           </div>
       </div>
@@ -995,6 +1067,7 @@ const App = () => {
         userStreak={user.streak} 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
+        language={language}
       >
         <div key={activeTab} className="view-animate space-y-6">
           {activeTab === 'mission' && renderMissionView()}
@@ -1011,14 +1084,22 @@ const App = () => {
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.2em] text-brand-primary font-semibold">Ative para liberar</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-brand-primary font-semibold">
+                  {language === 'en' ? 'Activate to unlock' : 'Ative para liberar'}
+                </p>
                 <h3 className="font-serif text-2xl text-brand-text leading-snug">
-                  {trialContext === 'mission' ? 'Liberar teste de 7 dias e finalizar a missão' : 'Ative o teste de 7 dias para liberar o premium'}
+                  {trialContext === 'mission'
+                    ? (language === 'en' ? 'Unlock 7-day trial and finish the mission' : 'Liberar teste de 7 dias e finalizar a missão')
+                    : (language === 'en' ? 'Start the 7-day trial to unlock premium' : 'Ative o teste de 7 dias para liberar o premium')}
                 </h3>
                 <p className="text-sm text-gray-600 mt-2">
                   {trialContext === 'mission'
-                    ? 'Para concluir a missão e seguir recebendo novas, ative o teste premium gratuito (sem cartão). Cancelamento fácil.'
-                    : 'Ative o teste premium gratuito (sem cartão) para liberar missões extras diárias, PDF e rituais.'}
+                    ? (language === 'en'
+                      ? 'To finish the mission and keep receiving new ones, start the free premium trial (no card). Easy cancel.'
+                      : 'Para concluir a missão e seguir recebendo novas, ative o teste premium gratuito (sem cartão). Cancelamento fácil.')
+                    : (language === 'en'
+                      ? 'Start the free premium trial (no card) to unlock extra daily missions, PDF, and rituals.'
+                      : 'Ative o teste premium gratuito (sem cartão) para liberar missões extras diárias, PDF e rituais.')}
                 </p>
                 </div>
               </div>
@@ -1026,31 +1107,33 @@ const App = () => {
             <div className="grid sm:grid-cols-2 gap-3 text-sm text-brand-text">
               <div className="flex items-start gap-2">
                 <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                <span>Sem cartão, cancelamento fácil a qualquer momento.</span>
+                <span>{language === 'en' ? 'No card, cancel anytime.' : 'Sem cartão, cancelamento fácil a qualquer momento.'}</span>
               </div>
               <div className="flex items-start gap-2">
                 <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                <span>Conteúdo premium liberado durante o teste de 7 dias.</span>
+                <span>{language === 'en' ? 'Premium content unlocked during the 7-day trial.' : 'Conteúdo premium liberado durante o teste de 7 dias.'}</span>
               </div>
               <div className="flex items-start gap-2">
                 <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                <span>PDF premium com reflexões e estatísticas.</span>
+                <span>{language === 'en' ? 'Premium PDF with reflections and stats.' : 'PDF premium com reflexões e estatísticas.'}</span>
               </div>
               <div className="flex items-start gap-2">
                 <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                <span>Selos e histórico ilimitado desbloqueados.</span>
+                <span>{language === 'en' ? 'Badges and unlimited history unlocked.' : 'Selos e histórico ilimitado desbloqueados.'}</span>
               </div>
             </div>
 
             {trialContext === 'mission' && (
               <p className="text-xs text-gray-500">
-                Se continuar no gratuito, a missão permanece aberta até você ativar o teste.
+                {language === 'en'
+                  ? 'If you stay on free, the mission remains open until you start the trial.'
+                  : 'Se continuar no gratuito, a missão permanece aberta até você ativar o teste.'}
               </p>
             )}
 
             {trialActivated && (
               <div className="bg-green-50 border border-green-100 text-green-700 text-sm rounded-xl p-3">
-                Teste ativado! Aproveite os próximos 7 dias para sentir o premium.
+                {language === 'en' ? 'Trial activated! Enjoy the next 7 days of premium.' : 'Teste ativado! Aproveite os próximos 7 dias para sentir o premium.'}
               </div>
             )}
 
@@ -1061,14 +1144,18 @@ const App = () => {
                 onClick={() => { setShowTrialModal(false); setPendingTrialMission(null); }}
                 disabled={trialLoading}
               >
-                Continuar no gratuito
+                {language === 'en' ? 'Stay on free' : 'Continuar no gratuito'}
               </Button>
               <Button 
                 className="w-full sm:w-auto bg-brand-text text-white hover:bg-black"
                 onClick={handleStartTrial}
                 disabled={trialLoading}
               >
-                {trialLoading ? 'Ativando...' : trialContext === 'mission' ? 'Ativar teste e concluir' : 'Ativar teste grátis'}
+                {trialLoading
+                  ? (language === 'en' ? 'Activating...' : 'Ativando...')
+                  : trialContext === 'mission'
+                    ? (language === 'en' ? 'Start trial and finish' : 'Ativar teste e concluir')
+                    : (language === 'en' ? 'Start free trial' : 'Ativar teste grátis')}
               </Button>
             </div>
           </div>
@@ -1168,18 +1255,28 @@ const App = () => {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Cancelar assinatura</p>
-                <h3 className="font-serif text-xl text-brand-text leading-snug">Tem certeza?</h3>
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">
+                  {language === 'en' ? 'Cancel subscription' : 'Cancelar assinatura'}
+                </p>
+                <h3 className="font-serif text-xl text-brand-text leading-snug">
+                  {language === 'en' ? 'Are you sure?' : 'Tem certeza?'}
+                </h3>
                 <p className="text-sm text-gray-600 mt-2">
-                  Você mantém acesso até o fim do ciclo pago. Depois volta para o plano gratuito e o histórico continua salvo.
+                  {language === 'en'
+                    ? 'You keep access until the end of the paid cycle. Then you return to the free plan and history stays saved.'
+                    : 'Você mantém acesso até o fim do ciclo pago. Depois volta para o plano gratuito e o histórico continua salvo.'}
                 </p>
               </div>
             </div>
             <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600">
-              O cancelamento é processado no gateway (Stripe/Mercado Pago). Clique abaixo para simular o cancelamento agora.
+              {language === 'en'
+                ? 'Cancellation is processed by the gateway (Stripe/Mercado Pago). Click below to simulate cancellation now.'
+                : 'O cancelamento é processado no gateway (Stripe/Mercado Pago). Clique abaixo para simular o cancelamento agora.'}
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowCancelModal(false)}>Voltar</Button>
+              <Button variant="ghost" onClick={() => setShowCancelModal(false)}>
+                {language === 'en' ? 'Back' : 'Voltar'}
+              </Button>
               <Button 
                 variant="outline" 
                 className="border-red-200 text-red-600 hover:bg-red-50"
@@ -1188,7 +1285,7 @@ const App = () => {
                   cancelSubscription().then(setUser);
                 }}
               >
-                Confirmar cancelamento
+                {language === 'en' ? 'Confirm cancellation' : 'Confirmar cancelamento'}
               </Button>
             </div>
           </div>
@@ -1251,9 +1348,11 @@ const App = () => {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowModeModal(false)}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => setShowModeModal(false)}>
+                {language === 'en' ? 'Cancel' : 'Cancelar'}
+              </Button>
               <Button onClick={handleSaveMode} className="bg-brand-text text-white hover:bg-black">
-                Salvar modo
+                {language === 'en' ? 'Save mode' : 'Salvar modo'}
               </Button>
             </div>
           </div>

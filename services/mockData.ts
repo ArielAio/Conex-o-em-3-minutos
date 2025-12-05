@@ -1,4 +1,5 @@
 import { Mission, Theme } from "../types";
+import { MISSION_TRANSLATIONS_EN } from "./i18n/content";
 
 type MissionOverride = Partial<
   Pick<Mission, "action" | "shortDescription" | "title" | "quote">
@@ -914,13 +915,22 @@ export const MISSIONS: Mission[] = [
   ),
 ].sort((a, b) => a.day - b.day);
 
+const localizeMission = (mission: Mission, language: "pt" | "en"): Mission => {
+  if (language !== "en") return mission;
+  const override = MISSION_TRANSLATIONS_EN[mission.id];
+  if (!override) return mission;
+  return { ...mission, ...override };
+};
+
 export const adaptMission = (
   mission: Mission,
-  mode: "solo" | "couple" | "distance" = "couple"
+  mode: "solo" | "couple" | "distance" = "couple",
+  language: "pt" | "en" = "pt"
 ): Mission => {
+  const localized = localizeMission(mission, language);
   if (mode === "solo") {
-    const override = SOLO_OVERRIDES[mission.id];
-    const merged = override ? { ...mission, ...override } : mission;
+    const override = language === "pt" ? SOLO_OVERRIDES[mission.id] : undefined;
+    const merged = override ? { ...localized, ...override } : localized;
     const soloInsights = merged.insights
       ? merged.insights.map((i) => adaptInsight(i, "solo"))
       : merged.insights;
@@ -931,34 +941,48 @@ export const adaptMission = (
   }
 
   if (mode === "distance") {
-    const override = DISTANCE_OVERRIDES[mission.id];
-    const merged = override ? { ...mission, ...override } : mission;
+    const override =
+      language === "pt" ? DISTANCE_OVERRIDES[mission.id] : undefined;
+    const merged = override ? { ...localized, ...override } : localized;
 
-    const distanceActionRaw = adaptDistanceText(merged.action);
-    const distanceShortRaw = adaptDistanceText(merged.shortDescription);
+    const distanceActionRaw =
+      language === "pt" ? adaptDistanceText(merged.action) : merged.action;
+    const distanceShortRaw =
+      language === "pt"
+        ? adaptDistanceText(merged.shortDescription)
+        : merged.shortDescription;
 
     const distanceInsights = merged.insights
       ? merged.insights.map((i) => adaptInsight(i, "distance"))
       : merged.insights;
 
     const distanceQuote = merged.quote
-      ? adaptInsight(adaptDistanceText(merged.quote), "distance")
+      ? adaptInsight(
+          language === "pt" ? adaptDistanceText(merged.quote) : merged.quote,
+          "distance"
+        )
       : merged.quote;
 
     const actionChanged =
-      (distanceActionRaw || "").trim() !== (mission.action || "").trim();
+      (distanceActionRaw || "").trim() !== (localized.action || "").trim();
     const shortChanged =
       (distanceShortRaw || "").trim() !==
-      (mission.shortDescription || "").trim();
+      (localized.shortDescription || "").trim();
 
     const fallbackSuffix =
-      " Façam por chamada ou enviem um áudio antes de comentar como se sentiram.";
+      language === "en"
+        ? " Do it over a call or voice note and debrief how it felt."
+        : " Façam por chamada ou enviem um áudio antes de comentar como se sentiram.";
     const distanceAction =
       (distanceActionRaw || merged.action) +
       (!override && !actionChanged ? fallbackSuffix : "");
     const distanceShort =
       (distanceShortRaw || merged.shortDescription) +
-      (!override && !shortChanged ? " Versão para fazer à distância." : "");
+      (!override && !shortChanged
+        ? language === "en"
+          ? " Distance-friendly version."
+          : " Versão para fazer à distância."
+        : "");
 
     return {
       ...merged,
@@ -969,36 +993,37 @@ export const adaptMission = (
     };
   }
 
-  const coupleInsights = mission.insights
-    ? mission.insights.map((i) => adaptInsight(i, "couple"))
-    : mission.insights;
+  const coupleInsights = localized.insights
+    ? localized.insights.map((i) => adaptInsight(i, "couple"))
+    : localized.insights;
 
-  return { ...mission, insights: coupleInsights };
+  return { ...localized, insights: coupleInsights };
 };
 
-const COUPLE_MISSIONS = MISSIONS;
-const SOLO_MISSIONS = MISSIONS.map((m) => adaptMission(m, "solo"));
-const DISTANCE_MISSIONS = MISSIONS.map((m) => adaptMission(m, "distance"));
-
-const getModeMissions = (mode: "solo" | "couple" | "distance") => {
-  if (mode === "solo") return SOLO_MISSIONS;
-  if (mode === "distance") return DISTANCE_MISSIONS;
-  return COUPLE_MISSIONS;
+const getModeMissions = (
+  mode: "solo" | "couple" | "distance",
+  language: "pt" | "en" = "pt"
+) => {
+  if (mode === "solo") return MISSIONS.map((m) => adaptMission(m, "solo", language));
+  if (mode === "distance") return MISSIONS.map((m) => adaptMission(m, "distance", language));
+  return MISSIONS.map((m) => adaptMission(m, "couple", language));
 };
 
 export const getMissionByIdMode = (
   id: number,
-  mode: "solo" | "couple" | "distance" = "couple"
+  mode: "solo" | "couple" | "distance" = "couple",
+  language: "pt" | "en" = "pt"
 ): Mission | undefined => {
-  const list = getModeMissions(mode);
+  const list = getModeMissions(mode, language);
   return list.find((m) => m.id === id);
 };
 
 export const getMissionByDay = (
   day: number,
-  mode: "solo" | "couple" | "distance" = "couple"
+  mode: "solo" | "couple" | "distance" = "couple",
+  language: "pt" | "en" = "pt"
 ): Mission | undefined => {
-  const list = getModeMissions(mode);
+  const list = getModeMissions(mode, language);
   return list.find((m) => m.day === day);
 };
 
@@ -1031,10 +1056,11 @@ export const getShuffledMissions = (
 export const getMissionForDayRandom = (
   day: number,
   mode: "solo" | "couple" | "distance" = "couple",
-  seed: string = ""
+  seed: string = "",
+  language: "pt" | "en" = "pt"
 ): Mission | undefined => {
   const shuffled = getShuffledMissions(seed || "default").map((m) => m.id);
   const missionId = shuffled[day - 1];
   if (!missionId) return undefined;
-  return getMissionByIdMode(missionId, mode);
+  return getMissionByIdMode(missionId, mode, language);
 };

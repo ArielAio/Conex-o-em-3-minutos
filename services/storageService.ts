@@ -3,6 +3,15 @@ import { auth, db } from './firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
+const detectDefaultLanguage = (): 'pt' | 'en' => {
+  if (typeof navigator === 'undefined') return 'pt';
+  const lang = navigator.language?.toLowerCase() || '';
+  if (lang.startsWith('en')) return 'en';
+  if (lang.startsWith('pt')) return 'pt';
+  const fallback = navigator.languages?.find((lng) => lng.toLowerCase().startsWith('en'));
+  return fallback ? 'en' : 'pt';
+};
+
 const STORAGE_KEY = 'conexao_3min_user_v1';
 let FIRESTORE_AVAILABLE = true;
 export const DEFAULT_USER: UserProgress = {
@@ -18,6 +27,7 @@ export const DEFAULT_USER: UserProgress = {
   reflections: {},
   partnerName: '',
   missionOrder: [],
+  language: detectDefaultLanguage(),
 };
 
 const disableFirestore = (reason: any) => {
@@ -44,6 +54,7 @@ const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
     username: data.username || '',
     email: data.email || '',
     partnerName: data.partnerName || '',
+    language: data.language === 'en' ? 'en' : detectDefaultLanguage(),
     mode: data.mode === 'solo' || data.mode === 'couple' || data.mode === 'distance' ? data.mode : 'couple',
     startDate: data.startDate || new Date().toISOString(),
     completedMissionIds: Array.isArray(data.completedMissionIds) ? data.completedMissionIds : [],
@@ -123,6 +134,7 @@ export const getUserData = async (): Promise<UserProgress> => {
           username: local.username || remote.username || user?.displayName || '',
           email: local.email || remote.email || user?.email || '',
           partnerName: local.partnerName || remote.partnerName || '',
+          language: local.language === 'en' || remote.language === 'en' ? 'en' : 'pt',
           mode: local.mode || remote.mode || 'couple',
           startDate: local.startDate || remote.startDate,
           completedMissionIds: Array.from(new Set([...(remote.completedMissionIds || []), ...(local.completedMissionIds || [])])),
@@ -194,6 +206,7 @@ export const updateUserProfile = async (name: string, partnerName: string, mode?
   if (mode === 'solo' || mode === 'couple' || mode === 'distance') {
     user.mode = mode;
   }
+  user.language = user.language === 'en' ? 'en' : 'pt';
   user.startDate = user.startDate || new Date().toISOString();
   await saveUserData(user);
   if (auth.currentUser) {
@@ -219,6 +232,13 @@ export const cancelSubscription = async (): Promise<UserProgress> => {
     await saveUserData(user);
     return user;
 }
+
+export const updateLanguagePreference = async (language: 'pt' | 'en', current?: UserProgress): Promise<UserProgress> => {
+  const user = ensureDefaults(current || getLocalData());
+  user.language = language === 'en' ? 'en' : 'pt';
+  await saveUserData(user);
+  return user;
+};
 
 export const resetProgress = async (): Promise<UserProgress> => {
     const local = getLocalData();
