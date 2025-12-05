@@ -21,6 +21,7 @@ export interface UserProgress {
   streak: number;
   lastLoginDate: string;
   reflections?: Record<number, string>;
+  missionOrder?: number[];
 }
 
 export enum Theme {

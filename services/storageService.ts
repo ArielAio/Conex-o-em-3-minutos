@@ -17,6 +17,7 @@ export const DEFAULT_USER: UserProgress = {
   lastLoginDate: new Date().toISOString(),
   reflections: {},
   partnerName: '',
+  missionOrder: [],
 };
 
 const disableFirestore = (reason: any) => {
@@ -50,6 +51,7 @@ const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
     streak: data.streak || 0,
     lastLoginDate: data.lastLoginDate || new Date().toISOString(),
     reflections: sanitizeReflections(data.reflections),
+    missionOrder: Array.isArray(data.missionOrder) ? data.missionOrder : [],
   };
 };
 
@@ -128,6 +130,7 @@ export const getUserData = async (): Promise<UserProgress> => {
           streak: Math.max(local.streak || 0, remote.streak || 0),
           lastLoginDate: local.lastLoginDate || remote.lastLoginDate || new Date().toISOString(),
           reflections: mergedReflections,
+          missionOrder: Array.isArray(local.missionOrder) && local.missionOrder.length ? local.missionOrder : (Array.isArray(remote.missionOrder) ? remote.missionOrder : []),
         };
         saveLocalData(merged);
         setDoc(docRef, merged, { merge: true }).catch(() => {});
@@ -227,6 +230,7 @@ export const resetProgress = async (): Promise<UserProgress> => {
         streak: 0,
         lastLoginDate: now,
         reflections: {},
+        missionOrder: [],
     };
     await saveUserData(resetUser);
     return resetUser;

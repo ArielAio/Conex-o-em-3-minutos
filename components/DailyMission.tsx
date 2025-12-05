@@ -11,6 +11,7 @@ interface DailyMissionProps {
   isLocked?: boolean;
   mode?: 'solo' | 'couple';
   partnerName?: string;
+  dayNumber?: number;
   initialReflection?: string;
   onSaveReflection?: (missionId: number, text: string) => void | Promise<void>;
 }
@@ -61,11 +62,13 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   isLocked = false,
   mode = 'couple',
   partnerName,
+  dayNumber,
   initialReflection = '',
   onSaveReflection,
 }) => {
   const isSolo = mode === 'solo';
   const partnerLabel = !isSolo && partnerName ? partnerName : null;
+  const displayDay = dayNumber ?? mission.day;
   const [insight, setInsight] = useState<string | null>(null);
   const [showAction, setShowAction] = useState(isCompleted);
   const [showCompletedDetails, setShowCompletedDetails] = useState(isCompleted);
@@ -145,7 +148,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
   };
 
   const buildShareText = () => {
-    const titleLine = `${isCompleted ? 'Missão concluída' : 'Missão do dia'}: "${mission.title}" (Dia ${mission.day} • ${mission.theme})`;
+    const titleLine = `${isCompleted ? 'Missão concluída' : 'Missão do dia'}: "${mission.title}" (Dia ${displayDay} • ${mission.theme})`;
     const actionLine = `Ação: ${mission.action}`;
     const inviteLine = isCompleted 
       ? isSolo ? 'Quero registrar e compartilhar esse momento.' : `Quero compartilhar esse momento com você${partnerLabel ? `, ${partnerLabel}` : ''}.`
@@ -308,7 +311,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             {showCompletedDetails && (
               <div className="mt-4 space-y-3 bg-white/80 border border-brand-primary/20 rounded-2xl p-5 shadow-sm anim-fade-slide">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-brand-primary font-bold">
-                  <span className="px-2 py-1 bg-brand-primary/10 rounded-full">Dia {mission.day}</span>
+                  <span className="px-2 py-1 bg-brand-primary/10 rounded-full">Dia {displayDay}</span>
                   <span className="text-gray-400">•</span>
                   <span>{mission.theme}</span>
                 </div>
@@ -339,7 +342,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
             <div>
               <p className="text-xs uppercase tracking-widest text-brand-accent font-bold">Conexão em 3 Minutos</p>
               <h2 className="text-3xl text-brand-text mt-1">{mission.title}</h2>
-              <p className="text-sm text-gray-500">Dia {mission.day} • {mission.theme}</p>
+              <p className="text-sm text-gray-500">Dia {displayDay} • {mission.theme}</p>
             </div>
             <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-brand-primary">
               <HeartHandshake className="w-6 h-6" />
@@ -378,7 +381,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({
                  <Clock3 className="w-3 h-3" /> 3 min
                </span>
           </div>
-              <span className="text-brand-primary font-bold text-xs uppercase tracking-widest">Dia {mission.day}</span>
+              <span className="text-brand-primary font-bold text-xs uppercase tracking-widest">Dia {displayDay}</span>
           <h2 className="font-serif heading-lg text-brand-text mt-2 leading-tight">
             {mission.title}
           </h2>

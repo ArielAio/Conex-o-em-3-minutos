@@ -4,9 +4,9 @@ import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { Onboarding } from './components/Onboarding';
-import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection, clearLocalUserData, DEFAULT_USER } from './services/storageService';
-import { getMissionByDay, MISSIONS } from './services/mockData';
-import { UserProgress, CURRENT_MONTH_THEME } from './types';
+import { getUserData, completeMission, updateUserProfile, upgradeUser, resetProgress, cancelSubscription, saveReflection, clearLocalUserData, DEFAULT_USER, saveUserData } from './services/storageService';
+import { MISSIONS, getMissionForDayRandom, getShuffledMissions, adaptMission } from './services/mockData';
+import { UserProgress, CURRENT_MONTH_THEME, Mission } from './types';
 import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock, Sparkles } from 'lucide-react';
 import { auth, logoutUser, loginWithGoogle } from './services/firebase';
 import { translateAuthError } from './services/firebaseErrors';
@@ -146,12 +146,22 @@ const App = () => {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [trialActivated, setTrialActivated] = useState(false);
   const [trialLoading, setTrialLoading] = useState(false);
-  const [pendingTrialMissionId, setPendingTrialMissionId] = useState<number | null>(null);
+  const [pendingTrialMission, setPendingTrialMission] = useState<{ mission: Mission; day: number } | null>(null);
   const [trialContext, setTrialContext] = useState<'mission' | 'profile'>('mission');
   const [showModeModal, setShowModeModal] = useState(false);
   const [modeSelection, setModeSelection] = useState<'solo' | 'couple'>('couple');
   const [modeName, setModeName] = useState('');
   const [modePartnerName, setModePartnerName] = useState('');
+  const [missionOrder, setMissionOrder] = useState<number[]>([]);
+  const shuffleSeed = user?.startDate || new Date().toISOString();
+
+  const getMissionForDay = (day: number): Mission | undefined => {
+    const missionId = missionOrder[day - 1];
+    const baseMission = missionId ? MISSIONS.find((m) => m.id === missionId) : undefined;
+    const mission = baseMission || getMissionForDayRandom(day, user?.mode || 'couple', shuffleSeed);
+    if (!mission) return undefined;
+    return adaptMission(mission, user?.mode || 'couple');
+  };
   const [highlightReflection, setHighlightReflection] = useState<{ title: string; text: string } | null>(null);
   
   // Pagination state for history to prevent heavy rendering
@@ -206,6 +216,15 @@ const App = () => {
       setModeSelection(user.mode || 'couple');
       setModeName(user.name || '');
       setModePartnerName(user.partnerName || '');
+      const seed = `${user.startDate}-${user.email || user.username || user.name || 'guest'}`;
+      const hasOrder = Array.isArray(user.missionOrder) && user.missionOrder.length === MISSIONS.length;
+      const order = hasOrder ? user.missionOrder! : getShuffledMissions(seed).map((m) => m.id);
+      setMissionOrder(order);
+      if (!hasOrder) {
+        const updated = { ...user, missionOrder: order };
+        saveUserData(updated);
+        setUser(updated);
+      }
     }
   }, [user]);
 
@@ -218,9 +237,12 @@ const App = () => {
   useEffect(() => {
     // highlight reflexão mais longa usando dados persistidos
     let best: { title: string; text: string } | null = null;
-    MISSIONS.forEach((mission) => {
-      const missionData = getMissionByDay(mission.day, user?.mode || 'couple') || mission;
-      const reflection = getReflectionForMission(mission.id);
+    const seed = user?.startDate || new Date().toISOString();
+    const order = missionOrder.length === MISSIONS.length ? missionOrder : getShuffledMissions(seed).map((m) => m.id);
+    order.forEach((missionId, idx) => {
+      const base = MISSIONS.find((m) => m.id === missionId) || MISSIONS[idx];
+      const missionData = adaptMission(base, user?.mode || 'couple');
+      const reflection = getReflectionForMission(base.id);
       if (reflection && reflection.trim().length > 0) {
         if (!best || reflection.length > best.text.length) {
           best = { title: missionData.title, text: reflection.trim() };
@@ -228,7 +250,7 @@ const App = () => {
       }
     });
     setHighlightReflection(best);
-  }, [todayKey, user]);
+  }, [todayKey, user, missionOrder]);
 
   useEffect(() => {
     setTabChanging(true);
@@ -241,30 +263,28 @@ const App = () => {
       setUser(updated);
   };
 
-  const completeMissionAndHandle = async (missionId: number, current: UserProgress) => {
-    const mission = MISSIONS.find((m) => m.id === missionId);
-    if (!mission) return;
+  const completeMissionAndHandle = async (mission: Mission, current: UserProgress, dayNumber: number) => {
     const updatedUser = await completeMission(mission.id, current);
     setUser(updatedUser);
-    if (updatedUser.isPremium && mission.day === 30) {
+    if (updatedUser.isPremium && dayNumber === MISSIONS.length) {
       setShowNextMonthModal(true);
     }
   };
 
   const handleCompleteMission = async () => {
     if (!user) return;
-    const activeMission = getMissionByDay(currentDay, user.mode || 'couple');
+    const activeMission = getMissionForDay(currentDay);
     if (!activeMission) return;
 
     if (!user.isPremium) {
-      setPendingTrialMissionId(activeMission.id);
+      setPendingTrialMission({ mission: activeMission, day: currentDay });
       setTrialActivated(false);
       setTrialContext('mission');
       setShowTrialModal(true);
       return;
     }
 
-    await completeMissionAndHandle(activeMission.id, user);
+    await completeMissionAndHandle(activeMission, user, currentDay);
   };
 
   const handleSubscribe = () => {
@@ -284,7 +304,7 @@ const App = () => {
         setCurrentDay(1);
         setActiveTab('mission');
         setShowTrialModal(false);
-        setPendingTrialMissionId(null);
+        setPendingTrialMission(null);
         setTrialActivated(false);
         setTrialLoading(false);
         setShowModeModal(false);
@@ -352,10 +372,10 @@ const App = () => {
       const upgraded = await upgradeUser();
       setUser(upgraded);
       setTrialActivated(true);
-      if (pendingTrialMissionId !== null) {
-        await completeMissionAndHandle(pendingTrialMissionId, upgraded);
+      if (pendingTrialMission) {
+        await completeMissionAndHandle(pendingTrialMission.mission, upgraded, pendingTrialMission.day);
       }
-      setPendingTrialMissionId(null);
+      setPendingTrialMission(null);
       setShowTrialModal(false);
     } catch (error) {
       console.error("Erro ao ativar teste", error);
@@ -394,15 +414,15 @@ const App = () => {
 
   if (!user) return null;
 
-  const activeMission = getMissionByDay(currentDay, user.mode || 'couple');
+  const activeMission = getMissionForDay(currentDay);
   const isCompleted = activeMission ? user.completedMissionIds.includes(activeMission.id) : false;
 
   const renderMissionView = () => {
     const suggestionList = user.mode === 'solo' ? SOLO_NEXT_STEP_SUGGESTIONS : NEXT_STEP_SUGGESTIONS;
     const shareSuggestion = async () => {
       if (!activeMission) return;
-      const suggestion = suggestionList[activeMission.day % suggestionList.length];
-      const text = `Acabei "${activeMission.title}" (Dia ${activeMission.day}) no Conexão em 3 Minutos. Próximo passo sugerido: ${suggestion}`;
+      const suggestion = suggestionList[(currentDay - 1) % suggestionList.length];
+      const text = `Acabei "${activeMission.title}" (Dia ${currentDay}) no Conexão em 3 Minutos. Próximo passo sugerido: ${suggestion}`;
       try {
         await navigator.share({ title: 'Próximo passo', text });
       } catch (err) {
@@ -426,7 +446,7 @@ const App = () => {
             <div className="flex items-center gap-2 mt-3 w-full">
               {Array.from({ length: 7 }).map((_, idx) => {
                 const dayNumber = Math.max(1, currentDay - 6) + idx;
-                const mission = getMissionByDay(dayNumber, user.mode || 'couple');
+                const mission = getMissionForDay(dayNumber);
                 const done = mission ? user.completedMissionIds.includes(mission.id) : false;
                 const isToday = dayNumber === currentDay;
                 const isFuture = dayNumber > currentDay;
@@ -454,6 +474,7 @@ const App = () => {
             isCompleted={isCompleted} 
             onComplete={handleCompleteMission}
             mode={user.mode || 'couple'}
+            dayNumber={currentDay}
             partnerName={user.partnerName || ''}
             initialReflection={getReflectionForMission(activeMission.id)}
             onSaveReflection={handleSaveReflection}
@@ -469,7 +490,7 @@ const App = () => {
           <div className="bg-gradient-to-r from-brand-primary/10 to-brand-secondary/10 border border-brand-primary/20 rounded-2xl p-4 shadow-sm card-padding flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className="text-xs uppercase text-brand-primary font-bold tracking-[0.2em]">Próximo passo sugerido</p>
-              <p className="text-sm text-brand-text">{suggestionList[activeMission.day % suggestionList.length]}</p>
+              <p className="text-sm text-brand-text">{suggestionList[(currentDay - 1) % suggestionList.length]}</p>
             </div>
             <Button variant="outline" className="border-brand-primary text-brand-primary hover:bg-brand-primary/10" onClick={shareSuggestion}>
               {user.mode === 'solo' ? 'Compartilhar (opcional)' : 'Compartilhar com parceiro(a)'}
@@ -549,8 +570,10 @@ const App = () => {
 
   const renderHistoryView = () => {
     // Pagination Logic
-    const visibleMissions = MISSIONS.slice(0, historyPage * ITEMS_PER_PAGE);
-    const hasMore = visibleMissions.length < MISSIONS.length;
+    const seed = user.startDate || new Date().toISOString();
+    const missionOrder = getShuffledMissions(seed);
+    const visibleMissions = missionOrder.slice(0, historyPage * ITEMS_PER_PAGE);
+    const hasMore = visibleMissions.length < missionOrder.length;
 
     return (
         <div className="space-y-6 md:space-y-8">
@@ -561,10 +584,11 @@ const App = () => {
 
             <div className="space-y-0">
                 {visibleMissions.map((mission, index) => {
-                    const missionData = getMissionByDay(mission.day, user.mode || 'couple') || mission;
+                    const dayNumber = index + 1;
+                    const missionData = getMissionForDay(dayNumber) || mission;
                     const isDone = user.completedMissionIds.includes(mission.id);
-                    const isLocked = !isDone && mission.day > currentDay;
-                    const isFuture = mission.day > currentDay;
+                    const isLocked = !isDone && dayNumber > currentDay;
+                    const isFuture = dayNumber > currentDay;
                     const reflection = getReflectionForMission(mission.id);
                 
                 // Streak logic: Check if this mission and the PREVIOUS mission in the list were both done
@@ -592,7 +616,7 @@ const App = () => {
                             }`}>
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-gray-400 uppercase">Dia {mission.day}</span>
+                                        <span className="text-xs font-bold text-gray-400 uppercase">Dia {dayNumber}</span>
                                     </div>
                                     {isDone && <Check className="w-4 h-4 text-green-500" />}
                                     {isLocked && <span className="text-xs text-gray-300">Bloqueado</span>}
@@ -952,7 +976,7 @@ const App = () => {
               <Button 
                 variant="ghost" 
                 className="w-full sm:w-auto" 
-                onClick={() => { setShowTrialModal(false); setPendingTrialMissionId(null); }}
+                onClick={() => { setShowTrialModal(false); setPendingTrialMission(null); }}
                 disabled={trialLoading}
               >
                 Continuar no gratuito

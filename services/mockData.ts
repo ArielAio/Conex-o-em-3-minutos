@@ -718,38 +718,78 @@ export const MISSIONS: Mission[] = [
   )
 ].sort((a, b) => a.day - b.day);
 
-export const getMissionByDay = (day: number, mode: 'solo' | 'couple' = 'couple'): Mission | undefined => {
-  const base = MISSIONS.find(m => m.day === day);
-  if (!base) return undefined;
-  const adaptInsight = (text: string, currentMode: 'solo' | 'couple') => {
-    let simplified = text
-      .replace(/micro-ação/gi, 'ação simples')
-      .replace(/paralisa/gi, 'trava')
-      .replace(/concreta/gi, 'real');
-    if (currentMode === 'solo') {
-      simplified = simplified
-        .replace(/vocês/gi, 'você')
-        .replace(/\bos dois\b/gi, 'você')
-        .replace(/\bcasal\b/gi, 'você')
-        .replace(/\bparceir[oa]s?\b/gi, 'você')
-        .replace(/\bjuntos?\b/gi, '')
-        .replace(/\bo outro\b/gi, 'você')
-        .replace(/\bentre vocês\b/gi, 'em você')
-        .replace(/\bo que o outro\b/gi, 'o que você')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-      const firstSentence = simplified.split('.').map(s => s.trim()).filter(Boolean)[0];
-      if (firstSentence) simplified = firstSentence;
-    }
-    return simplified;
-  };
+const adaptInsight = (text: string, currentMode: 'solo' | 'couple') => {
+  let simplified = text
+    .replace(/micro-ação/gi, 'ação simples')
+    .replace(/paralisa/gi, 'trava')
+    .replace(/concreta/gi, 'real');
+  if (currentMode === 'solo') {
+    simplified = simplified
+      .replace(/vocês/gi, 'você')
+      .replace(/\bos dois\b/gi, 'você')
+      .replace(/\bcasal\b/gi, 'você')
+      .replace(/\bparceir[oa]s?\b/gi, 'você')
+      .replace(/\bjuntos?\b/gi, '')
+      .replace(/\bo outro\b/gi, 'você')
+      .replace(/\bentre vocês\b/gi, 'em você')
+      .replace(/\bo que o outro\b/gi, 'o que você')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    const firstSentence = simplified.split('.').map(s => s.trim()).filter(Boolean)[0];
+    if (firstSentence) simplified = firstSentence;
+  }
+  return simplified;
+};
+
+export const adaptMission = (mission: Mission, mode: 'solo' | 'couple' = 'couple'): Mission => {
   if (mode === 'solo') {
-    const override = SOLO_OVERRIDES[base.id];
-    const merged = override ? { ...base, ...override } : base;
+    const override = SOLO_OVERRIDES[mission.id];
+    const merged = override ? { ...mission, ...override } : mission;
     const soloInsights = merged.insights ? merged.insights.map((i) => adaptInsight(i, 'solo')) : merged.insights;
     const soloQuote = merged.quote ? adaptInsight(merged.quote, 'solo') : merged.quote;
     return { ...merged, insights: soloInsights, quote: soloQuote };
   }
-  const coupleInsights = base.insights ? base.insights.map((i) => adaptInsight(i, 'couple')) : base.insights;
-  return { ...base, insights: coupleInsights };
+  const coupleInsights = mission.insights ? mission.insights.map((i) => adaptInsight(i, 'couple')) : mission.insights;
+  return { ...mission, insights: coupleInsights };
+};
+
+export const getMissionByDay = (day: number, mode: 'solo' | 'couple' = 'couple'): Mission | undefined => {
+  const base = MISSIONS.find(m => m.day === day);
+  if (!base) return undefined;
+  return adaptMission(base, mode);
+};
+
+const hashString = (input: string): number => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const mulberry32 = (a: number) => {
+  return () => {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+};
+
+export const getShuffledMissions = (seed: string): Mission[] => {
+  const list = [...MISSIONS];
+  const rand = mulberry32(hashString(seed || 'default'));
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+};
+
+export const getMissionForDayRandom = (day: number, mode: 'solo' | 'couple' = 'couple', seed: string = ''): Mission | undefined => {
+  const shuffled = getShuffledMissions(seed || 'default');
+  const mission = shuffled[day - 1];
+  if (!mission) return undefined;
+  return adaptMission(mission, mode);
 };
