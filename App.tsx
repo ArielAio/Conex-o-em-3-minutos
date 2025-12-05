@@ -309,7 +309,7 @@ const App = () => {
   };
 
   const handleSubscribe = () => {
-      setPendingTrialMissionId(null);
+      setPendingTrialMission(null);
       setTrialContext('profile');
       setTrialActivated(false);
       setShowTrialModal(true);
@@ -569,16 +569,21 @@ const App = () => {
           </div>
         )}
 
-          <div className="bg-white px-6 py-4 rounded-2xl border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all duration-300 soft-hover card-float">
-           <div className="w-full">
-              <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">Progresso</span>
-              <div className="flex gap-1 mt-1">
-                 {Array.from({length: 5}).map((_, i) => (
-                    <div key={i} className={`w-8 h-1 rounded-full ${i < (user.completedMissionIds.length / 30) * 5 ? 'bg-brand-primary' : 'bg-gray-100'}`} />
-                 ))}
-              </div>
-           </div>
-           <span className="text-brand-primary font-serif font-bold text-lg sm:text-xl">{Math.round((user.completedMissionIds.length / 30) * 100)}%</span>
+        <div className="bg-white px-6 py-4 rounded-2xl border border-gray-100 flex flex-col gap-2 transition-all duration-300 soft-hover card-float">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">Progresso</span>
+            <span className="text-brand-primary font-serif font-bold text-sm sm:text-base">{Math.round((user.completedMissionIds.length / 30) * 100)}%</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-accent transition-all duration-500"
+              style={{ width: `${Math.min(100, (user.completedMissionIds.length / 30) * 100)}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-gray-500">
+            <span>{user.completedMissionIds.length} / 30 missões</span>
+            <span>Streak {user.streak}</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
