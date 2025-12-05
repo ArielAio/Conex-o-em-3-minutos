@@ -642,9 +642,9 @@ const App = () => {
   const renderHistoryView = () => {
     // Pagination Logic
     const seed = user.startDate || new Date().toISOString();
-    const missionOrder = getShuffledMissions(seed, missionMode || 'couple');
-    const visibleMissions = missionOrder.slice(0, historyPage * ITEMS_PER_PAGE);
-    const hasMore = visibleMissions.length < missionOrder.length;
+    const orderIds = missionOrder.length === MISSIONS.length ? missionOrder : getShuffledMissions(seed).map((m) => m.id);
+    const visibleIds = orderIds.slice(0, historyPage * ITEMS_PER_PAGE);
+    const hasMore = visibleIds.length < orderIds.length;
 
     return (
         <div className="space-y-6 md:space-y-8">
@@ -654,22 +654,22 @@ const App = () => {
             </header>
 
             <div className="space-y-0">
-                {visibleMissions.map((mission, index) => {
+                {visibleIds.map((missionId, index) => {
                     const dayNumber = index + 1;
-                    const missionData = getMissionForDay(dayNumber) || mission;
-                    const isDone = user.completedMissionIds.includes(mission.id);
+                    const missionData = getMissionByIdMode(missionId, missionMode || 'couple');
+                    const isDone = user.completedMissionIds.includes(missionId);
                     const isLocked = !isDone && dayNumber > currentDay;
                     const isFuture = dayNumber > currentDay;
-                    const reflection = getReflectionForMission(mission.id);
+                    const reflection = getReflectionForMission(missionId);
                 
                 // Streak logic: Check if this mission and the PREVIOUS mission in the list were both done
-                const prevMission = visibleMissions[index - 1];
-                const isPrevDone = prevMission && user.completedMissionIds.includes(prevMission.id);
+                const prevId = visibleIds[index - 1];
+                const isPrevDone = prevId && user.completedMissionIds.includes(prevId);
                 const isStreak = isDone && isPrevDone;
 
                     return (
                         <div 
-                          key={mission.id} 
+                          key={missionId} 
                           className="relative anim-fade-slide-fast transition-all duration-300 hover:-translate-y-0.5" 
                           style={{ animationDelay: `${index * 35}ms` }}
                         >

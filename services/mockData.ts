@@ -1022,10 +1022,9 @@ const mulberry32 = (a: number) => {
 };
 
 export const getShuffledMissions = (
-  seed: string,
-  mode: "solo" | "couple" | "distance" = "couple"
+  seed: string
 ): Mission[] => {
-  const list = [...getModeMissions(mode)];
+  const list = [...MISSIONS];
   const rand = mulberry32(hashString(seed || "default"));
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -1039,9 +1038,7 @@ export const getMissionForDayRandom = (
   mode: "solo" | "couple" | "distance" = "couple",
   seed: string = ""
 ): Mission | undefined => {
-  const shuffled = getShuffledMissions(seed || "default", mode).map(
-    (m) => m.id
-  );
+  const shuffled = getShuffledMissions(seed || "default").map((m) => m.id);
   const missionId = shuffled[day - 1];
   if (!missionId) return undefined;
   return getMissionByIdMode(missionId, mode);
