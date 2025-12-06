@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from './Button';
 import { Heart, ArrowRight, AlertTriangle, Copy, Check } from 'lucide-react';
 import { createAccountWithEmail, loginWithEmail } from '../services/firebase';
@@ -8,9 +8,10 @@ import { useLanguage } from '../services/i18n/language';
 
 interface OnboardingProps {
     onComplete: (name: string, partnerName: string, mode: 'solo' | 'couple' | 'distance') => void;
+    initialAuthMode?: 'choice' | 'signup' | 'signin';
 }
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, initialAuthMode = 'choice' }) => {
     const { language } = useLanguage();
     const t = (pt: string, en: string) => (language === 'en' ? en : pt);
     const [step, setStep] = useState<number | 'modeConfirm'>(0); // 0 = Welcome/Login, 1 = My Name, 2 = Partner Name, modeConfirm = pós signup
@@ -18,7 +19,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [partnerName, setPartnerName] = useState('');
     const [mode, setMode] = useState<'solo' | 'couple' | 'distance' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [authMode, setAuthMode] = useState<'choice' | 'signup' | 'signin'>('choice');
+    const [authMode, setAuthMode] = useState<'choice' | 'signup' | 'signin'>(initialAuthMode);
     const [authLoading, setAuthLoading] = useState(false);
     const [signupEmail, setSignupEmail] = useState('');
     const [signupPassword, setSignupPassword] = useState('');
@@ -35,6 +36,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             setTimeout(() => setCopied(false), 2000);
         }
     };
+
+    useEffect(() => {
+        setAuthMode(initialAuthMode);
+    }, [initialAuthMode]);
 
     const handleStartGuest = () => {
         setAuthMode('choice');
@@ -292,12 +297,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             {authMode === 'signin' && (
                                 <div className="space-y-3 text-left animate-fade-slide-fast">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-sm font-semibold text-brand-text">Entrar com e-mail</p>
+                                        <p className="text-sm font-semibold text-brand-text">{t('Entrar com e-mail', 'Sign in with email')}</p>
                                         <button 
                                             onClick={() => { setAuthMode('choice'); setErrorMsg(null); }} 
                                             className="text-xs text-gray-500 hover:text-brand-primary"
                                         >
-                                            Voltar
+                                            {t('Voltar', 'Back')}
                                         </button>
                                     </div>
                                     <input 
@@ -320,11 +325,17 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                         disabled={authLoading || !signinEmail || !signinPassword}
                                         className="bg-brand-text text-white hover:bg-black"
                                     >
-                                        {authLoading ? 'Entrando...' : 'Entrar e continuar'}
+                                        {authLoading ? t('Entrando...', 'Signing in...') : t('Entrar e continuar', 'Sign in and continue')}
                                     </Button>
-                                    <p className="text-[11px] text-gray-500 text-center">
-                                        Se esqueceu a senha, use Entrar com Google ou crie uma conta nova.
-                                    </p>
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-500 gap-2">
+                                        <span>{t('Esqueceu a senha? Crie uma conta nova com outro e-mail ou recupere no provedor.', 'Forgot password? Create a new account with another email or recover with your provider.')}</span>
+                                        <button
+                                            onClick={() => { setAuthMode('signup'); setErrorMsg(null); }}
+                                            className="text-brand-primary hover:text-brand-accent font-semibold"
+                                        >
+                                            {t('Não tem conta? Criar', "Don't have an account? Sign up")}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>

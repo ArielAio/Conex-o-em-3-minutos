@@ -11,8 +11,7 @@ import { NEXT_STEP_SUGGESTIONS_EN, SOLO_NEXT_STEP_SUGGESTIONS_EN, DISTANCE_NEXT_
 const DEFAULT_MISSION_ORDER = MISSIONS.map((m) => m.id);
 import { UserProgress, CURRENT_MONTH_THEME, Mission } from './types';
 import { Check, Star, Settings, User as UserIcon, LogOut, Flame, ChevronDown, RotateCcw, AlertTriangle, Lock, Sparkles } from 'lucide-react';
-import { auth, logoutUser, loginWithGoogle } from './services/firebase';
-import { translateAuthError } from './services/firebaseErrors';
+import { auth, logoutUser } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './components/Button';
 import { LanguageSelector } from './components/LanguageSelector';
@@ -223,6 +222,8 @@ const App = () => {
   const [resolvingSubscription, setResolvingSubscription] = useState(false);
   const [resolveAttempted, setResolveAttempted] = useState(false);
   const lastStatusCheck = useRef<{ id?: string; ts: number }>({ id: undefined, ts: 0 });
+  const [forceAuthFlow, setForceAuthFlow] = useState(false);
+  const [forceAuthMode, setForceAuthMode] = useState<'choice' | 'signup' | 'signin'>('signin');
 
   const premiumAccess = useMemo(() => {
     if (!user) return false;
@@ -358,9 +359,10 @@ const App = () => {
   }, [activeTab]);
 
   const handleOnboardingComplete = async (name: string, partnerName: string, mode: 'solo' | 'couple' | 'distance') => {
-      const updated = await updateUserProfile(name, partnerName, mode);
-      setUser(updated);
-      setMissionMode(updated.mode || 'couple');
+    const updated = await updateUserProfile(name, partnerName, mode);
+    setUser(updated);
+    setMissionMode(updated.mode || 'couple');
+    setForceAuthFlow(false);
   };
 
   const completeMissionAndHandle = async (mission: Mission, current: UserProgress, dayNumber: number) => {
@@ -684,14 +686,10 @@ const App = () => {
 
     resolveSubscription();
   }, [user?.subscriptionId, user?.email, resolvingSubscription, resolveAttempted]);
-  const handleLogin = async () => {
-      try {
-        await loginWithGoogle();
-      } catch (error: any) {
-        console.error("Erro ao conectar com Google", error);
-        const translated = translateAuthError(error, 'conectar com Google');
-        alert(`${translated.title}: ${translated.detail}`);
-      }
+  const handleLogin = () => {
+    // Abre fluxo de autenticação por e-mail (entrar/criar conta)
+    setForceAuthMode('signin');
+    setForceAuthFlow(true);
   };
   const handleSaveProfile = async () => {
       const isSolo = user?.mode === 'solo';
@@ -826,8 +824,8 @@ const App = () => {
 
   const needsOnboarding = user && (!user.mode || ((user.mode === 'couple' || user.mode === 'distance') && (!user.partnerName || user.partnerName === '')));
 
-  if (needsOnboarding) {
-      return <Onboarding onComplete={handleOnboardingComplete} />;
+  if (needsOnboarding || forceAuthFlow) {
+    return <Onboarding onComplete={handleOnboardingComplete} initialAuthMode={forceAuthMode} />;
   }
 
   if (!user) return null;
@@ -1255,7 +1253,7 @@ const App = () => {
                   variant="outline" 
                   className="text-sm px-4 py-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10"
                 >
-                  {language === 'en' ? 'Sign in with Google' : 'Entrar com Google'}
+                  {language === 'en' ? 'Sign in / Create account' : 'Entrar / criar conta'}
                 </Button>
               </div>
             </div>
