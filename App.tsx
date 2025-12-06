@@ -390,6 +390,13 @@ const App = () => {
   };
 
   const handleSubscribe = async () => {
+    if (!auth.currentUser) {
+      // Força autenticação antes de assinar: visitantes não podem ir direto ao checkout.
+      setShowSubscribeConfirm(false);
+      setForceAuthMode('signin');
+      setForceAuthFlow(true);
+      return;
+    }
     const priceId = resolvePriceIdByLocale();
     if (!priceId) {
       alert('Configure os preços de assinatura (VITE_STRIPE_PRICE_ID_BRL/USD).');
