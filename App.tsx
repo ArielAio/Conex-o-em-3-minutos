@@ -398,12 +398,18 @@ const App = () => {
 
     try {
       setTrialLoading(true);
+      const status = (user?.subscriptionStatus || '').toString();
+      const alreadyActive = ['active', 'trialing', 'past_due', 'incomplete'].includes(status) || user?.isPremium;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const trialExpired = user?.trialWindowEnd ? nowSec > user.trialWindowEnd : false;
+      const allowTrial = !alreadyActive && !trialExpired; // permite trial se janela de 7 dias ainda não expirou
       const res = await fetch(`${API_BASE}/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           priceId,
           customerEmail: auth.currentUser?.email || undefined,
+          allowTrial,
         }),
       });
 

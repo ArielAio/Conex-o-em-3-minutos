@@ -27,6 +27,8 @@ export interface UserProgress {
   lastLoginDate: string;
   reflections?: Record<number, string>;
   missionOrder?: number[];
+  trialUsed?: boolean; // se já consumiu o trial de 7 dias
+  trialWindowEnd?: number; // epoch seconds até quando o trial está válido (mesmo se cancelar)
 }
 
 export enum Theme {

@@ -32,6 +32,8 @@ export const DEFAULT_USER: UserProgress = {
   currentPeriodEnd: undefined,
   cancelAtPeriodEnd: false,
   language: detectDefaultLanguage(),
+  trialUsed: false,
+  trialWindowEnd: undefined,
 };
 
 const disableFirestore = (reason: any) => {
@@ -71,6 +73,8 @@ const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
     lastLoginDate: data.lastLoginDate || new Date().toISOString(),
     reflections: sanitizeReflections(data.reflections),
     missionOrder: Array.isArray(data.missionOrder) ? data.missionOrder : [],
+    trialUsed: Boolean(data.trialUsed),
+    trialWindowEnd: data.trialWindowEnd || undefined,
   };
 };
 
@@ -161,6 +165,8 @@ export const getUserData = async (): Promise<UserProgress> => {
           lastLoginDate: local.lastLoginDate || remote.lastLoginDate || new Date().toISOString(),
           reflections: mergedReflections,
           missionOrder: Array.isArray(local.missionOrder) && local.missionOrder.length ? local.missionOrder : (Array.isArray(remote.missionOrder) ? remote.missionOrder : []),
+          trialUsed: Boolean(local.trialUsed || remote.trialUsed),
+          trialWindowEnd: remote.trialWindowEnd || local.trialWindowEnd || undefined,
         };
         saveLocalData(merged);
         setDoc(docRef, merged, { merge: true }).catch(() => {});
@@ -252,6 +258,15 @@ export const upgradeUser = async (subscriptionId?: string, subscriptionStatus?: 
     if (typeof cancelAtPeriodEnd === 'boolean') {
       user.cancelAtPeriodEnd = cancelAtPeriodEnd;
     }
+    // Se estiver em trial, marca a janela de 7 dias (não reseta em nova assinatura).
+    if (subscriptionStatus === 'trialing' && typeof currentPeriodEnd === 'number') {
+      user.trialWindowEnd = user.trialWindowEnd || currentPeriodEnd;
+    }
+    // Se a janela passou, marca como trial consumido.
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (user.trialWindowEnd && nowSec > user.trialWindowEnd) {
+      user.trialUsed = true;
+    }
     await saveUserData(user);
     return user;
 }
@@ -277,8 +292,10 @@ export const cancelSubscription = async (options?: {
       user.currentPeriodEnd = currentPeriodEnd;
     }
 
-    // Access only if not immediate and period not ended yet.
-    const accessStillValid = !immediate && cancelAtEnd && !!user.currentPeriodEnd && user.currentPeriodEnd > nowSec;
+    // Access válido se ainda está no período ou dentro da janela de trial.
+    const accessStillValid =
+      (!immediate && cancelAtEnd && !!user.currentPeriodEnd && user.currentPeriodEnd > nowSec) ||
+      (!!user.trialWindowEnd && user.trialWindowEnd > nowSec);
     user.isPremium = accessStillValid;
 
     await saveUserData(user);

@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { priceId, customerEmail } = req.body || {};
+  const { priceId, customerEmail, allowTrial } = req.body || {};
 
   if (!priceId) {
     return res.status(400).json({ error: 'priceId is required' });
@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    const includeTrial = Boolean(allowTrial) && !!trialDays;
     // Envie o usuário de volta para a SPA via hash, evitando 404 em rotas que não existem no servidor.
     const successUrl = `${appUrl}/#/app?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${appUrl}/#/app?cancelled=1`;
@@ -38,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cancel_url: cancelUrl,
       billing_address_collection: 'auto',
       allow_promotion_codes: true,
-      subscription_data: trialDays
+      subscription_data: includeTrial
         ? {
             trial_period_days: trialDays,
           }
