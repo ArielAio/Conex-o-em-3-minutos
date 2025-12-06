@@ -280,12 +280,10 @@ const App = () => {
   };
 
   useEffect(() => {
-    let initialized = false;
     const unsubscribe = onAuthStateChanged(auth, async () => {
-      if (!initialized) {
-        initialized = true;
-        await loadUserData();
-      }
+      // Sempre recarrega os dados quando o estado de auth muda (login/logout),
+      // para evitar pedir nome/parceiro de novo se já existir no perfil.
+      await loadUserData();
     });
     return () => unsubscribe();
   }, []);
@@ -550,8 +548,20 @@ const App = () => {
 
   // When returning from Stripe checkout, confirm session and mark as premium.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
+    const parseSessionId = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('session_id')) return searchParams.get('session_id');
+      // Se veio via hash (ex.: #/app?session_id=...), extrai também.
+      const hash = window.location.hash || '';
+      const hashQuery = hash.includes('?') ? hash.split('?')[1] : '';
+      if (hashQuery) {
+        const hashParams = new URLSearchParams(hashQuery);
+        return hashParams.get('session_id');
+      }
+      return null;
+    };
+
+    const sessionId = parseSessionId();
 
     const shouldConfirm = sessionId && !user?.isPremium && !confirmingStripe;
     if (!shouldConfirm) return;
@@ -574,6 +584,11 @@ const App = () => {
           // Clean URL
           const url = new URL(window.location.href);
           url.searchParams.delete('session_id');
+          if (url.hash.includes('session_id')) {
+            const hashParts = url.hash.split('?');
+            const newHash = hashParts[0];
+            url.hash = newHash;
+          }
           window.history.replaceState({}, document.title, url.toString());
         }
       } catch (err) {
@@ -1476,12 +1491,12 @@ const App = () => {
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-3 border border-gray-100 text-center">
             <div className="w-12 h-12 rounded-full border-4 border-brand-primary/30 border-t-brand-primary mx-auto animate-spin" />
             <h3 className="text-lg font-semibold text-brand-text">
-              {language === 'en' ? 'Confirming payment...' : 'Confirmando pagamento...'}
+              {language === 'en' ? 'Confirming payment...' : 'Confirmando assinatura...'}
             </h3>
             <p className="text-sm text-gray-600">
               {language === 'en'
-                ? 'Hold on while we confirm your subscription. Do not close this tab.'
-                : 'Aguarde enquanto confirmamos sua assinatura. Não feche esta aba.'}
+                ? 'We are validating your subscription with Stripe. This may take a few seconds.'
+                : 'Estamos validando sua assinatura com o Stripe. Isso pode levar alguns segundos.'}
             </p>
           </div>
         </div>

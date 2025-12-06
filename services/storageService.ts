@@ -292,11 +292,16 @@ export const cancelSubscription = async (options?: {
       user.currentPeriodEnd = currentPeriodEnd;
     }
 
-    // Access válido se ainda está no período ou dentro da janela de trial.
-    const accessStillValid =
-      (!immediate && cancelAtEnd && !!user.currentPeriodEnd && user.currentPeriodEnd > nowSec) ||
-      (!!user.trialWindowEnd && user.trialWindowEnd > nowSec);
-    user.isPremium = accessStillValid;
+    // Se cancelou imediato, corta o acesso na hora (mesmo se ainda estivesse no trial window).
+    if (immediate) {
+      user.isPremium = false;
+    } else {
+      // Access válido se ainda está no período ou dentro da janela de trial.
+      const accessStillValid =
+        (!immediate && cancelAtEnd && !!user.currentPeriodEnd && user.currentPeriodEnd > nowSec) ||
+        (!!user.trialWindowEnd && user.trialWindowEnd > nowSec);
+      user.isPremium = accessStillValid;
+    }
 
     await saveUserData(user);
     return user;
