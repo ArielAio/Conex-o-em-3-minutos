@@ -717,23 +717,10 @@ const App = () => {
   };
 
   const handleStartTrial = async () => {
+    // Em vez de ativar localmente, leva direto ao checkout Stripe para ativar o trial/assinatura.
     if (!user) return;
-    setTrialLoading(true);
-    try {
-      const upgraded = await upgradeUser();
-      setUser(upgraded);
-      setTrialActivated(true);
-      if (pendingTrialMission) {
-        await completeMissionAndHandle(pendingTrialMission.mission, upgraded, pendingTrialMission.day);
-      }
-      setPendingTrialMission(null);
-      setShowTrialModal(false);
-    } catch (error) {
-      console.error("Erro ao ativar teste", error);
-      alert("Não foi possível ativar o teste agora. Tente novamente.");
-    } finally {
-      setTrialLoading(false);
-    }
+    setShowTrialModal(false);
+    await handleSubscribe();
   };
 
   const handleSaveReflection = async (missionId: number, text: string) => {
