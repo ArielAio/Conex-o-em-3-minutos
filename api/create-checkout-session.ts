@@ -25,12 +25,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    // Envie o usuário de volta para a SPA via hash, evitando 404 em rotas que não existem no servidor.
+    const successUrl = `${appUrl}/#/app?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${appUrl}/#/app?cancelled=1`;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: customerEmail,
-      success_url: `${process.env.APP_URL || 'http://localhost:5173'}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL || 'http://localhost:5173'}/cancel`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       billing_address_collection: 'auto',
       allow_promotion_codes: true,
       subscription_data: trialDays
