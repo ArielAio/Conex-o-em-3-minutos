@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { DailyMission } from './components/DailyMission';
 import { PDFExport } from './components/PDFExport';
@@ -31,6 +31,25 @@ const getLocalDateKey = (date: Date = new Date()) => {
   const m = `${date.getMonth() + 1}`.padStart(2, '0');
   const d = `${date.getDate()}`.padStart(2, '0');
   return `${y}-${m}-${d}`;
+};
+
+// API base (sem barra final). Se não terminar com /api, anexamos /api.
+const RAW_API_BASE = (import.meta as any).env?.VITE_API_URL?.toString()?.replace(/\/$/, '') || '/api';
+const API_BASE = RAW_API_BASE.endsWith('/api') ? RAW_API_BASE : `${RAW_API_BASE}/api`;
+// Price IDs por moeda (configuráveis via env).
+const envAny = (import.meta as any).env || {};
+const PRICE_USD = envAny.VITE_STRIPE_PRICE_ID_USD || envAny.VITE_STRIPE_PRICE_ID || 'price_1SbLQaIPHHCnqO89wnvIRA80';
+const PRICE_BRL = envAny.VITE_STRIPE_PRICE_ID_BRL || '';
+
+const resolvePriceIdByLocale = () => {
+  // Heurística: se idioma pt-BR ou fuso horário do Brasil, usa BRL; senão USD.
+  if (typeof navigator !== 'undefined') {
+    const lang = navigator.language?.toLowerCase() || '';
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const isBR = lang.startsWith('pt-br') || tz.includes('America/Sao_Paulo') || tz.includes('America/Recife') || tz.includes('America/Bahia') || tz.includes('America/Manaus') || tz.includes('America/Fortaleza');
+    if (isBR && PRICE_BRL) return PRICE_BRL;
+  }
+  return PRICE_USD;
 };
 
 const getCurrentDayNumber = (startDate: string) => {
@@ -197,6 +216,23 @@ const App = () => {
   const [modeSwitching, setModeSwitching] = useState(false);
   const [missionMode, setMissionMode] = useState<'solo' | 'couple' | 'distance'>('couple');
   const shuffleSeed = user?.startDate || new Date().toISOString();
+  const [confirmingStripe, setConfirmingStripe] = useState(false);
+  const [showSubscribeConfirm, setShowSubscribeConfirm] = useState(false);
+  const [stripePending, setStripePending] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [resolvingSubscription, setResolvingSubscription] = useState(false);
+  const [resolveAttempted, setResolveAttempted] = useState(false);
+  const lastStatusCheck = useRef<{ id?: string; ts: number }>({ id: undefined, ts: 0 });
+
+  const premiumAccess = useMemo(() => {
+    if (!user) return false;
+    const status = (user.subscriptionStatus || '').toLowerCase();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const allowedStatuses = new Set(['active', 'trialing', 'past_due', 'incomplete']);
+    const statusGrants = allowedStatuses.has(status);
+    const cancelGrace = Boolean(user.cancelAtPeriodEnd && user.currentPeriodEnd && user.currentPeriodEnd > nowSec);
+    return Boolean(user.isPremium || statusGrants || cancelGrace);
+  }, [user]);
 
   const getMissionForDay = (day: number): Mission | undefined => {
     const order = missionOrder.length === MISSIONS.length ? missionOrder : DEFAULT_MISSION_ORDER;
@@ -244,9 +280,12 @@ const App = () => {
   };
 
   useEffect(() => {
-    loadUserData();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        loadUserData();
+    let initialized = false;
+    const unsubscribe = onAuthStateChanged(auth, async () => {
+      if (!initialized) {
+        initialized = true;
+        await loadUserData();
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -339,7 +378,7 @@ const App = () => {
     const activeMission = getMissionForDay(currentDay);
     if (!activeMission) return;
 
-    if (!user.isPremium) {
+    if (!premiumAccess) {
       setPendingTrialMission({ mission: activeMission, day: currentDay });
       setTrialActivated(false);
       setTrialContext('mission');
@@ -350,11 +389,137 @@ const App = () => {
     await completeMissionAndHandle(activeMission, user, currentDay);
   };
 
-  const handleSubscribe = () => {
-      setPendingTrialMission(null);
-      setTrialContext('profile');
-      setTrialActivated(false);
-      setShowTrialModal(true);
+  const handleSubscribe = async () => {
+    const priceId = resolvePriceIdByLocale();
+    if (!priceId) {
+      alert('Configure os preços de assinatura (VITE_STRIPE_PRICE_ID_BRL/USD).');
+      return;
+    }
+
+    try {
+      setTrialLoading(true);
+      const res = await fetch(`${API_BASE}/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId,
+          customerEmail: auth.currentUser?.email || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error('Sessão sem URL retornada.');
+    } catch (error) {
+      console.error('Erro ao iniciar checkout Stripe', error);
+      alert('Não foi possível iniciar o pagamento agora. Tente novamente.');
+    } finally {
+      setTrialLoading(false);
+    }
+  };
+
+  const openSubscribeConfirm = () => setShowSubscribeConfirm(true);
+  const cancelSubscribeConfirm = () => setShowSubscribeConfirm(false);
+  const confirmSubscribe = () => {
+    setShowSubscribeConfirm(false);
+    handleSubscribe();
+  };
+
+  const handleConfirmCancelSubscription = async () => {
+    let subscriptionId = user?.subscriptionId;
+    if (!subscriptionId) {
+      // tentativa de resolver pelo e-mail antes de abortar
+      const email = auth.currentUser?.email || user?.email;
+      if (email) {
+        try {
+          setResolvingSubscription(true);
+          const res = await fetch(`${API_BASE}/resolve-subscription?email=${encodeURIComponent(email)}`);
+          if (res.ok) {
+            const data = await res.json();
+            subscriptionId = data?.id;
+            if (subscriptionId) {
+              const currentPeriodEnd = typeof data?.current_period_end === 'number' ? data.current_period_end : undefined;
+              const cancelAtPeriodEnd = Boolean(data?.cancel_at_period_end);
+              const status = (data?.status || '').toString();
+              const updated = await upgradeUser(subscriptionId, status, currentPeriodEnd, cancelAtPeriodEnd);
+              setUser(updated);
+            }
+          }
+        } catch (err) {
+          console.warn('Não foi possível resolver assinatura pelo e-mail antes do cancelamento', err);
+        } finally {
+          setResolvingSubscription(false);
+        }
+      }
+    }
+
+    if (!subscriptionId) {
+      alert(language === 'en' ? 'Subscription not found.' : 'Assinatura não encontrada.');
+      return;
+    }
+
+    try {
+      setCancelLoading(true);
+      const res = await fetch(`${API_BASE}/cancel-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId,
+          cancelAtPeriodEnd: false, // cancel immediately
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const canceledLocal = await cancelSubscription({
+        subscriptionId: data?.id || subscriptionId,
+        status: data?.status,
+        currentPeriodEnd: data?.current_period_end,
+        cancelAtPeriodEnd: data?.cancel_at_period_end ?? false,
+        immediate: true,
+      });
+      setUser(canceledLocal);
+
+      // Sync with Stripe after cancel to ensure state is accurate
+      try {
+        const verify = await fetch(`${API_BASE}/subscription-status?subscriptionId=${encodeURIComponent(subscriptionId)}`);
+        if (verify.ok) {
+          const verifyData = await verify.json();
+          const vStatus = (verifyData?.status || '').toString();
+          const vEnd = typeof verifyData?.current_period_end === 'number' ? verifyData.current_period_end : undefined;
+          const vCancel = Boolean(verifyData?.cancel_at_period_end);
+          const allowed = ['active', 'trialing', 'past_due', 'incomplete'];
+          if (allowed.includes(vStatus) || (vCancel && vEnd && vEnd > Math.floor(Date.now() / 1000))) {
+            const upgraded = await upgradeUser(subscriptionId, vStatus, vEnd, vCancel);
+            setUser(upgraded);
+          } else {
+            const ensured = await cancelSubscription({
+              subscriptionId,
+              status: vStatus,
+              currentPeriodEnd: vEnd,
+              cancelAtPeriodEnd: vCancel,
+              immediate: true,
+            });
+            setUser(ensured);
+          }
+        }
+      } catch (err) {
+        console.warn('Não foi possível verificar cancelamento na Stripe', err);
+      }
+      setShowCancelModal(false);
+    } catch (err) {
+      console.error('Erro ao cancelar assinatura Stripe', err);
+      alert(language === 'en' ? 'Could not cancel now. Try again.' : 'Não foi possível cancelar agora. Tente novamente.');
+    } finally {
+      setCancelLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -376,6 +541,128 @@ const App = () => {
         setLoading(false);
       }
   }
+
+  // When returning from Stripe checkout, confirm session and mark as premium.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+
+    const shouldConfirm = sessionId && !user?.isPremium && !confirmingStripe;
+    if (!shouldConfirm) return;
+
+    const confirmStripe = async () => {
+      try {
+        setStripePending(true);
+        setConfirmingStripe(true);
+        const res = await fetch(`${API_BASE}/get-checkout-session?session_id=${encodeURIComponent(sessionId!)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const status = (data?.status || '').toString();
+        const subscriptionId = data?.subscriptionId as string | undefined;
+        const currentPeriodEnd = typeof data?.currentPeriodEnd === 'number' ? data.currentPeriodEnd : undefined;
+        const cancelAtPeriodEnd = Boolean(data?.cancelAtPeriodEnd);
+        const subscriptionActive = ['active', 'trialing', 'complete', 'incomplete'].includes(status);
+        if (subscriptionActive) {
+          const upgraded = await upgradeUser(subscriptionId, status, currentPeriodEnd, cancelAtPeriodEnd);
+          setUser(upgraded);
+          // Clean URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete('session_id');
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      } catch (err) {
+        console.error('Erro ao confirmar sessão Stripe', err);
+      } finally {
+        setConfirmingStripe(false);
+        setStripePending(false);
+      }
+    };
+
+    confirmStripe();
+  }, [user?.isPremium, confirmingStripe]);
+
+  // Refresh subscription status from Stripe when opening the app (if we have subscriptionId).
+  useEffect(() => {
+    const refreshSubscription = async () => {
+      if (!user?.subscriptionId) return;
+       // evita consultas excessivas: só revalida a cada 30s por subscriptionId
+      if (
+        lastStatusCheck.current.id === user.subscriptionId &&
+        Date.now() - lastStatusCheck.current.ts < 30000
+      ) {
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/subscription-status?subscriptionId=${encodeURIComponent(user.subscriptionId)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const status = (data?.status || '').toString();
+        const currentPeriodEnd = typeof data?.current_period_end === 'number' ? data.current_period_end : undefined;
+        const cancelAtPeriodEnd = Boolean(data?.cancel_at_period_end);
+        const allowed = ['active', 'trialing', 'past_due', 'incomplete'];
+        if (allowed.includes(status) || (cancelAtPeriodEnd && currentPeriodEnd && currentPeriodEnd > Math.floor(Date.now() / 1000))) {
+          const upgraded = await upgradeUser(user.subscriptionId, status, currentPeriodEnd, cancelAtPeriodEnd);
+          setUser(upgraded);
+        } else {
+          const updated = await cancelSubscription({
+            subscriptionId: user.subscriptionId,
+            status,
+            currentPeriodEnd,
+            cancelAtPeriodEnd,
+            immediate: true,
+          });
+          setUser(updated);
+        }
+        lastStatusCheck.current = { id: user.subscriptionId, ts: Date.now() };
+      } catch (err) {
+        console.error('Erro ao atualizar status da assinatura', err);
+      }
+    };
+
+    refreshSubscription();
+  }, [user?.subscriptionId]);
+
+  // Resolve subscriptionId by email for legacy users that lack it.
+  useEffect(() => {
+    const resolveSubscription = async () => {
+      if (resolvingSubscription || resolveAttempted) return;
+      if (user?.subscriptionId) return;
+      const email = auth.currentUser?.email || user?.email;
+      if (!email) return;
+      try {
+        setResolvingSubscription(true);
+        const res = await fetch(`${API_BASE}/resolve-subscription?email=${encodeURIComponent(email)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const status = (data?.status || '').toString();
+        const currentPeriodEnd = typeof data?.current_period_end === 'number' ? data.current_period_end : undefined;
+        const cancelAtPeriodEnd = Boolean(data?.cancel_at_period_end);
+        const allowed = ['active', 'trialing', 'past_due', 'incomplete'];
+        const grant = allowed.includes(status) || (cancelAtPeriodEnd && currentPeriodEnd && currentPeriodEnd > Math.floor(Date.now() / 1000));
+        if (grant) {
+          const upgraded = await upgradeUser(data?.id, status, currentPeriodEnd, cancelAtPeriodEnd);
+          setUser(upgraded);
+        } else {
+          const updated = await cancelSubscription({
+            subscriptionId: data?.id,
+            status,
+            currentPeriodEnd,
+            cancelAtPeriodEnd,
+            immediate: true,
+          });
+          setUser(updated);
+        }
+      } catch (err) {
+        // Se não achar, mantém free.
+        console.warn('Não foi possível resolver assinatura pelo e-mail', err);
+      } finally {
+        setResolvingSubscription(false);
+        setResolveAttempted(true);
+      }
+    };
+
+    resolveSubscription();
+  }, [user?.subscriptionId, user?.email, resolvingSubscription, resolveAttempted]);
   const handleLogin = async () => {
       try {
         await loginWithGoogle();
@@ -658,7 +945,7 @@ const App = () => {
           </div>
         </div>
 
-        {!user.isPremium && (
+        {!premiumAccess && (
         <div className="bg-gradient-to-br from-brand-primary/10 via-white to-brand-secondary/10 border border-brand-primary/20 rounded-2xl p-5 sm:p-6 shadow-sm card-padding card-float soft-hover">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
             <div>
@@ -688,9 +975,9 @@ const App = () => {
 
           <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
             <p className="max-w-xl">Inclui rituais extras semanais, histórico ilimitado e exportação em PDF com suas notas.</p>
-            {!user.isPremium && (
+            {!premiumAccess && (
               <Button 
-                onClick={handleSubscribe} 
+                onClick={openSubscribeConfirm} 
                 className="w-full sm:w-auto bg-brand-text text-white hover:bg-black px-5"
               >
                 Ativar teste premium
@@ -793,7 +1080,7 @@ const App = () => {
             
             <PDFExport user={user} theme={CURRENT_MONTH_THEME} />
             
-            {!user.isPremium && <SubscriptionGate onSubscribe={handleSubscribe} />}
+            {!premiumAccess && <SubscriptionGate onSubscribe={openSubscribeConfirm} />}
         </div>
     );
   };
@@ -862,7 +1149,7 @@ const App = () => {
             <h3 className="text-sm font-semibold text-brand-text mb-3">{language === 'en' ? 'Habit badges' : 'Selos de hábito'}</h3>
             <div className="grid grid-cols-3 gap-3">
               {[{label: language === 'en' ? '3 days' : '3 dias', threshold: 3}, {label: language === 'en' ? '7 days' : '7 dias', threshold: 7}, {label: language === 'en' ? '14 days' : '14 dias', threshold: 14}].map(({label, threshold}) => {
-                const lockedByPlan = !user.isPremium;
+                const lockedByPlan = !premiumAccess;
                 const achieved = !lockedByPlan && user.streak >= threshold;
                 const locked = lockedByPlan;
                 return (
@@ -877,7 +1164,7 @@ const App = () => {
             </div>
           </div>
 
-          {user.isPremium && (
+          {premiumAccess && (
             <div className="bg-white p-4 rounded-xl border border-gray-100 soft-hover transition-all duration-300">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -895,7 +1182,7 @@ const App = () => {
             </div>
           )}
 
-          {!user.isPremium && (
+          {!premiumAccess && (
             <div className="bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 p-5 rounded-2xl border border-brand-primary/20 shadow-sm space-y-3 card-padding">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -906,7 +1193,7 @@ const App = () => {
                   </div>
                 </div>
                 <div className="text-sm text-gray-600 font-semibold">
-                  {language === 'en' ? '$0.99 / month' : 'R$ 9,90 / mês'}
+                  {language === 'en' ? '$0.99 / month' : 'R$ 4,99 / mês'}
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-3 text-sm text-brand-text">
@@ -941,7 +1228,7 @@ const App = () => {
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-500">
                 <span>{language === 'en' ? 'Cancel easily in your profile' : 'Cancele fácil no perfil'}</span>
-                <Button onClick={handleSubscribe} className="w-full sm:w-auto bg-brand-text text-white hover:bg-black px-6">
+                <Button onClick={openSubscribeConfirm} className="w-full sm:w-auto bg-brand-text text-white hover:bg-black px-6">
                   {language === 'en' ? 'Subscribe and try 7 days' : 'Assinar e testar 7 dias'}
                 </Button>
               </div>
@@ -968,18 +1255,18 @@ const App = () => {
 
           <div className="bg-brand-primary/5 p-4 rounded-xl flex items-center gap-4 transition-all duration-300 soft-hover">
                <div className="bg-white p-2 rounded-full shadow-sm">
-                   <Star className={`w-5 h-5 ${user.isPremium ? 'text-brand-gold fill-brand-gold' : 'text-gray-300'}`} />
+                   <Star className={`w-5 h-5 ${premiumAccess ? 'text-brand-gold fill-brand-gold' : 'text-gray-300'}`} />
                </div>
                <div>
                    <h3 className="font-bold text-brand-text text-sm">
-                    {language === 'en' ? 'Plan ' : 'Plano '}{user.isPremium ? 'Premium' : (language === 'en' ? 'Free' : 'Gratuito')}
+                    {language === 'en' ? 'Plan ' : 'Plano '}{premiumAccess ? 'Premium' : (language === 'en' ? 'Free' : 'Gratuito')}
                    </h3>
                    <p className="text-xs text-gray-500">
-                    {user.isPremium ? (language === 'en' ? 'Full access unlocked' : 'Acesso total liberado') : (language === 'en' ? 'Subscribe to unlock more' : 'Assine para ver mais')}
+                    {premiumAccess ? (language === 'en' ? 'Full access unlocked' : 'Acesso total liberado') : (language === 'en' ? 'Subscribe to unlock more' : 'Assine para ver mais')}
                    </p>
                </div>
-               {!user.isPremium && (
-                   <button onClick={handleSubscribe} className="ml-auto text-xs bg-brand-text text-white px-3 py-1 rounded-full">
+               {!premiumAccess && (
+                  <button onClick={openSubscribeConfirm} className="ml-auto text-xs bg-brand-text text-white px-3 py-1 rounded-full">
                        {language === 'en' ? 'Upgrade' : 'Upgrade'}
                    </button>
                )}
@@ -1162,6 +1449,51 @@ const App = () => {
         </div>
       )}
 
+      {showSubscribeConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-gray-100">
+            <h3 className="text-lg font-semibold text-brand-text">
+              {language === 'en' ? 'Confirm subscription' : 'Confirmar assinatura'}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {language === 'en'
+                ? 'Proceed to Stripe to complete your subscription and unlock all premium features.'
+                : 'Prosseguir para o Stripe para concluir a assinatura e liberar todos os recursos premium.'}
+            </p>
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+              <Button variant="ghost" className="w-full sm:w-auto" onClick={cancelSubscribeConfirm}>
+                {language === 'en' ? 'Not now' : 'Agora não'}
+              </Button>
+              <Button
+                className="w-full sm:w-auto bg-brand-text text-white hover:bg-black"
+                onClick={confirmSubscribe}
+                disabled={trialLoading}
+              >
+                {trialLoading
+                  ? (language === 'en' ? 'Opening checkout...' : 'Abrindo checkout...')
+                  : (language === 'en' ? 'Continue to checkout' : 'Continuar para o checkout')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {stripePending && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-3 border border-gray-100 text-center">
+            <div className="w-12 h-12 rounded-full border-4 border-brand-primary/30 border-t-brand-primary mx-auto animate-spin" />
+            <h3 className="text-lg font-semibold text-brand-text">
+              {language === 'en' ? 'Confirming payment...' : 'Confirmando pagamento...'}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {language === 'en'
+                ? 'Hold on while we confirm your subscription. Do not close this tab.'
+                : 'Aguarde enquanto confirmamos sua assinatura. Não feche esta aba.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {showResetModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-red-100">
@@ -1238,7 +1570,7 @@ const App = () => {
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setShowNextMonthModal(false)}>Depois</Button>
-                <Button className="w-full sm:w-auto" onClick={() => { handleSubscribe(); setShowNextMonthModal(false); }}>
+                <Button className="w-full sm:w-auto" onClick={() => { openSubscribeConfirm(); setShowNextMonthModal(false); }}>
                   Assinar e desbloquear
                 </Button>
               </div>
@@ -1270,22 +1602,22 @@ const App = () => {
             </div>
             <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600">
               {language === 'en'
-                ? 'Cancellation is processed by the gateway (Stripe/Mercado Pago). Click below to simulate cancellation now.'
-                : 'O cancelamento é processado no gateway (Stripe/Mercado Pago). Clique abaixo para simular o cancelamento agora.'}
+                ? 'We will cancel your subscription in Stripe. You keep access until the end of the current cycle.'
+                : 'Vamos cancelar sua assinatura na Stripe. Você mantém acesso até o fim do ciclo atual.'}
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowCancelModal(false)}>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="ghost" className="w-full" onClick={() => setShowCancelModal(false)}>
                 {language === 'en' ? 'Back' : 'Voltar'}
               </Button>
               <Button 
                 variant="outline" 
-                className="border-red-200 text-red-600 hover:bg-red-50"
-                onClick={() => {
-                  setShowCancelModal(false);
-                  cancelSubscription().then(setUser);
-                }}
+                className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                onClick={handleConfirmCancelSubscription}
+                disabled={cancelLoading}
               >
-                {language === 'en' ? 'Confirm cancellation' : 'Confirmar cancelamento'}
+                {cancelLoading
+                  ? (language === 'en' ? 'Cancelling...' : 'Cancelando...')
+                  : (language === 'en' ? 'Confirm cancellation' : 'Confirmar cancelamento')}
               </Button>
             </div>
           </div>

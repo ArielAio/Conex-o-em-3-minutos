@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:vercel": "vercel dev",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -14,11 +15,14 @@
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.555.0",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+    "react-dom": "^19.2.1",
+    "stripe": "^17.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vercel/node": "^5.1.8",
+    "vercel": "^49.1.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

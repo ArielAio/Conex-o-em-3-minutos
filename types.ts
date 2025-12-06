@@ -14,6 +14,10 @@ export interface UserProgress {
   username?: string;
   email?: string;
   partnerName?: string;
+  subscriptionId?: string;
+  subscriptionStatus?: string; // Stripe status (active, trialing, canceled, past_due, incomplete, etc.)
+  currentPeriodEnd?: number; // epoch seconds
+  cancelAtPeriodEnd?: boolean;
   mode?: 'solo' | 'couple' | 'distance';
   language?: 'pt' | 'en';
   startDate: string; // ISO String

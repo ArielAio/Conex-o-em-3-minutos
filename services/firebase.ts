@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, setPersistence, browserLocalPersistence, inMemoryPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -18,8 +18,19 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
+let persistenceReady: Promise<void> | null = null;
+const ensureAuthPersistence = () => {
+  if (persistenceReady) return persistenceReady;
+  persistenceReady = setPersistence(auth, browserLocalPersistence).catch(() => {
+    // Fallback para ambientes que bloqueiam sessionStorage/cookies.
+    return setPersistence(auth, inMemoryPersistence);
+  });
+  return persistenceReady;
+};
+
 export const loginWithGoogle = async () => {
     try {
+        await ensureAuthPersistence();
         const result = await signInWithPopup(auth, googleProvider);
         return result.user;
     } catch (error) {
@@ -33,6 +44,7 @@ export const logoutUser = async () => {
 }
 
 export const createAccountWithEmail = async (email: string, password: string, username: string) => {
+    await ensureAuthPersistence();
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     if (username) {
         try {
@@ -45,6 +57,7 @@ export const createAccountWithEmail = async (email: string, password: string, us
 };
 
 export const loginWithEmail = async (email: string, password: string) => {
+    await ensureAuthPersistence();
     const credential = await signInWithEmailAndPassword(auth, email, password);
     return credential.user;
 };

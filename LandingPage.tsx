@@ -11,7 +11,7 @@ const sellingPoints = [
   { title: 'Missão diária guiada', desc: '3 minutos por dia para quebrar a rotina automática e abrir conversa de verdade.' },
   { title: 'Envio por e-mail', desc: 'Receba a missão às 07h para criar hábito e não depender da memória.' },
   { title: 'PDF do mês', desc: 'Transforme as conquistas em um presente digital que fica para sempre.' },
-  { title: 'Assinatura leve', desc: 'R$ 9,90 para liberar missões premium diárias e manter o progresso correndo.' },
+  { title: 'Assinatura leve', desc: 'R$ 4,99 para liberar missões premium diárias e manter o progresso correndo.' },
 ];
 
 const sellingPointsEn = [
@@ -424,7 +424,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <p className="text-xs uppercase tracking-[0.2em] text-white/70 font-semibold">{t('Plano completo', 'Full plan')}</p>
             <h3 className="font-serif text-2xl leading-tight">{t('Assine e mantenha a evolução sem pausa.', 'Subscribe and keep evolving without pauses.')}</h3>
             <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold">{language === 'en' ? '$0.99' : 'R$ 9,90'}</span>
+              <span className="text-4xl font-bold">{language === 'en' ? '$0.99' : 'R$ 4,99'}</span>
               <span className="text-sm text-white/80 mb-1">{language === 'en' ? '/ month' : '/ mês'}</span>
             </div>
             <p className="text-white/90">{t('Libere missões premium diárias automaticamente, ganhe PDF premium, rituais exclusivos e histórico ilimitado.', 'Unlock daily premium missions automatically, get premium PDF, exclusive rituals, and unlimited history.')}</p>

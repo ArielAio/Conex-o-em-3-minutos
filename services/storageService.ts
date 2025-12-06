@@ -27,6 +27,10 @@ export const DEFAULT_USER: UserProgress = {
   reflections: {},
   partnerName: '',
   missionOrder: [],
+  subscriptionId: '',
+  subscriptionStatus: '',
+  currentPeriodEnd: undefined,
+  cancelAtPeriodEnd: false,
   language: detectDefaultLanguage(),
 };
 
@@ -54,6 +58,10 @@ const ensureDefaults = (data: Partial<UserProgress>): UserProgress => {
     username: data.username || '',
     email: data.email || '',
     partnerName: data.partnerName || '',
+    subscriptionId: data.subscriptionId || '',
+    subscriptionStatus: data.subscriptionStatus || '',
+    currentPeriodEnd: data.currentPeriodEnd || undefined,
+    cancelAtPeriodEnd: Boolean(data.cancelAtPeriodEnd),
     language: data.language === 'en' ? 'en' : detectDefaultLanguage(),
     mode: data.mode === 'solo' || data.mode === 'couple' || data.mode === 'distance' ? data.mode : 'couple',
     startDate: data.startDate || new Date().toISOString(),
@@ -80,6 +88,16 @@ const getLocalData = (): UserProgress => {
 const saveLocalData = (data: UserProgress) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ensureDefaults(data)));
 }
+
+const cleanUndefined = <T extends Record<string, any>>(obj: T): T => {
+  const copy = { ...obj };
+  Object.keys(copy).forEach((key) => {
+    if (copy[key] === undefined) {
+      delete copy[key];
+    }
+  });
+  return copy;
+};
 
 export const clearLocalUserData = (): UserProgress => {
   localStorage.removeItem(STORAGE_KEY);
@@ -160,7 +178,7 @@ export const saveUserData = async (data: UserProgress) => {
   const user = auth.currentUser;
   if (user && FIRESTORE_AVAILABLE) {
       try {
-        await setDoc(doc(db, "users", user.uid), data, { merge: true });
+        await setDoc(doc(db, "users", user.uid), cleanUndefined(data), { merge: true });
       } catch (e) {
         disableFirestore(e);
       }
@@ -197,7 +215,7 @@ export const saveReflection = async (missionId: number, text: string, current?: 
   return user;
 };
 
-export const updateUserProfile = async (name: string, partnerName: string, mode?: 'solo' | 'couple'): Promise<UserProgress> => {
+export const updateUserProfile = async (name: string, partnerName: string, mode?: 'solo' | 'couple' | 'distance'): Promise<UserProgress> => {
   const user = getLocalData();
   user.name = name;
   user.partnerName = partnerName;
@@ -219,16 +237,50 @@ export const updateUserProfile = async (name: string, partnerName: string, mode?
   return user;
 };
 
-export const upgradeUser = async (): Promise<UserProgress> => {
+export const upgradeUser = async (subscriptionId?: string, subscriptionStatus?: string, currentPeriodEnd?: number, cancelAtPeriodEnd?: boolean): Promise<UserProgress> => {
     const user = getLocalData();
     user.isPremium = true;
+    if (subscriptionId) {
+      user.subscriptionId = subscriptionId;
+    }
+    if (subscriptionStatus) {
+      user.subscriptionStatus = subscriptionStatus;
+    }
+    if (typeof currentPeriodEnd === 'number') {
+      user.currentPeriodEnd = currentPeriodEnd;
+    }
+    if (typeof cancelAtPeriodEnd === 'boolean') {
+      user.cancelAtPeriodEnd = cancelAtPeriodEnd;
+    }
     await saveUserData(user);
     return user;
 }
 
-export const cancelSubscription = async (): Promise<UserProgress> => {
+export const cancelSubscription = async (options?: {
+  subscriptionId?: string;
+  status?: string;
+  currentPeriodEnd?: number;
+  cancelAtPeriodEnd?: boolean;
+  immediate?: boolean;
+}): Promise<UserProgress> => {
     const user = getLocalData();
-    user.isPremium = false;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const cancelAtEnd = options?.cancelAtPeriodEnd ?? true;
+    const currentPeriodEnd = options?.currentPeriodEnd;
+    const status = options?.status || 'canceled';
+    const immediate = options?.immediate ?? !cancelAtEnd;
+
+    user.subscriptionId = options?.subscriptionId || user.subscriptionId || '';
+    user.subscriptionStatus = status;
+    user.cancelAtPeriodEnd = cancelAtEnd;
+    if (typeof currentPeriodEnd === 'number') {
+      user.currentPeriodEnd = currentPeriodEnd;
+    }
+
+    // Access only if not immediate and period not ended yet.
+    const accessStillValid = !immediate && cancelAtEnd && !!user.currentPeriodEnd && user.currentPeriodEnd > nowSec;
+    user.isPremium = accessStillValid;
+
     await saveUserData(user);
     return user;
 }
